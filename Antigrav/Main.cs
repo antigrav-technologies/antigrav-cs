@@ -1,5 +1,5 @@
 ﻿namespace Antigrav {
-    public class Program {
+    public class Main {
         private static string AbandonAllHope(object o) {
             throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}");
         }
