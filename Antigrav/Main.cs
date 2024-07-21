@@ -1,35 +1,65 @@
 ﻿namespace Antigrav {
     public class Main {
-        private static string AbandonAllHope(object o) {
-            throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}");
-        }
         /// <summary>
         /// Serialize object as an ANTIGRAV string
         /// </summary>
         /// <param name="o">Object to serialze</param>
-        /// <param name="SortKeys">Sort keys in dictionaries</param>
+        /// <param name="sortKeys">Sort keys in dictionaries</param>
         /// <param name="indent">Amount of spaces to indent, no indent if null</param>
-        /// <param name="ensure_ascii">If true then escapes all non-ASCII symbols</param>
-        /// <param name="allow_nan">Allow not a number values (includes infinity)</param>
-        /// <param name="custom_encoder">Make your encoding logic here if you need</param>
-        /// <param name="skipKeys">If false then when non-string/int/etc. keys pass in dictionaries throw ArgumentException. Otherwise just skip</param>
+        /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
+        /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+        /// <param name="customEncoder">Make your encoding logic here if you need, throws ArgumentException by default</param>
+        /// <param name="skipKeys">If false then when not convertable to string keys pass in dictionaries throw ArgumentException. Otherwise just skip</param>
         /// <returns>ANTIGRAV serialized string</returns>
-        public static string Dump(
-            object o,
-            bool SortKeys = false,
+        /// <exception>ArgumentException, see <param>skipKeys</param>, <param>ensureASCII</param> and <param>allowNaN</param></exception>
+        public static string DumpToString(
+            object? o,
+            bool sortKeys = false,
             uint? indent = null,
-            bool ensure_ascii = true,
-            bool allow_nan = true,
-            Func<object, string>? custom_encoder = null,
+            bool ensureASCII = true,
+            bool allowNaN = true,
+            Func<object, string>? customEncoder = null,
             bool skipKeys = false
         ) {
             Encoder.ANTIGRAVEncoder encoder = new Encoder.ANTIGRAVEncoder(
-                SortKeys, indent, ensure_ascii, allow_nan, skipKeys, custom_encoder ?? AbandonAllHope
+                sortKeys, indent, ensureASCII, allowNaN, skipKeys, customEncoder ?? (o => throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}"))
             );
             return encoder.Encode(o);
         }
-        public static void Main(string[] args) {
-            // ...
+
+
+        /// <summary>
+        /// Write object serialized as an ANTIGRAV string to stream
+        /// </summary>
+        /// <param name="o">Object to serialze</param>
+        /// <param name="stream"Stream to write in</param>
+        /// <param name="sortKeys">Sort keys in dictionaries</param>
+        /// <param name="indent">Amount of spaces to indent, no indent if null</param>
+        /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
+        /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+        /// <param name="customEncoder">Make your encoding logic here if you need, throws ArgumentException by default</param>
+        /// <param name="skipKeys">If false then when not convertable to string keys pass in dictionaries throw ArgumentException. Otherwise just skip</param>
+        /// <returns>ANTIGRAV serialized string</returns>
+        /// <exception>ArgumentException, see <param>skipKeys</param>, <param>ensureASCII</param> and <param>allowNaN</param></exception>
+        public static void Dump(
+            object? o,
+            System.IO.Stream stream,
+            bool sortKeys = false,
+            uint? indent = null,
+            bool ensureASCII = true,
+            bool allowNaN = true,
+            Func<object, string>? customEncoder = null,
+            bool skipKeys = false
+        ) {
+            stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(
+                o,
+                sortKeys,
+                indent,
+                ensureASCII,
+                allowNaN,
+                customEncoder,
+                skipKeys
+            )));
         }
     }
 }

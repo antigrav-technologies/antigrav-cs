@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Text.RegularExpressions;
-using System.IO;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Net.WebRequestMethods;
+﻿using System.Text.RegularExpressions;
 using System.Collections;
 using System.Numerics;
-using System.Runtime.Serialization;
 
 namespace Antigrav {
     internal class Encoder {
@@ -81,22 +72,22 @@ namespace Antigrav {
             private Func<object, string> custom_encoder;
 
             public ANTIGRAVEncoder(
-                    bool SortKeys,
-                    uint? indent,
-                    bool ensure_ascii,
-                    bool allow_nan,
-                    bool skipKeys,
-                    Func<object, string> custom_encoder
+                bool SortKeys,
+                uint? indent,
+                bool ensure_ascii,
+                bool allow_nan,
+                bool skipKeys,
+                Func<object, string> custom_encoder
             ) {
                 this.sortKeys = SortKeys;
                 this.indent = indent;
                 this.ensure_ascii = ensure_ascii;
                 this.allow_nan = allow_nan;
                 this.skipKeys = skipKeys;
-                this.custom_encoder = custom_encoder ?? (o => throw new ArgumentException($"Type is not ANTIGRAV Serializable: {nameof(o)}")); ;
+                this.custom_encoder = custom_encoder;
             }
 
-            public string Encode(object o) {
+            public string Encode(object? o) {
                 Func<string, string> _encoder = ensure_ascii ? EncodeStringASCII : EncodeString;
 
                 string _encode_integer(object o, bool prefix = true) => o switch {
@@ -153,7 +144,7 @@ namespace Antigrav {
                     return text + prefix;
                 }
 
-                string _encode_basic_type(object o, uint _current_indent_level) => o switch {
+                string _encode(object? o, uint _current_indent_level) => o switch {
                     string s => _encoder(s),
                     null => "null",
                     true => "true",
@@ -181,7 +172,7 @@ namespace Antigrav {
                     foreach (object value in list) {
                         if (first) first = false;
                         else buf += separator;
-                        buf += _encode_basic_type(value, _current_indent_level);
+                        buf += _encode(value, _current_indent_level);
                     }
                     if (indent != null) {
                         _current_indent_level--;
@@ -203,7 +194,7 @@ namespace Antigrav {
                         buf += _newline_indent;
                     }
 
-                    Dictionary<string, object> newDict = new Dictionary<string, object>();
+                    Dictionary<string, object?> newDict = new Dictionary<string, object?>();
 
                     foreach (var keyValue in dict) {
                         object k = keyValue.Key;
@@ -230,7 +221,7 @@ namespace Antigrav {
                         else if (skipKeys) continue;
                         else throw new ArgumentException($"keys must be string, sbyte, byte, ushort, short, int, uint, long, float, double, bool or null, not {nameof(k)}");
                     }
-
+                    
                     if (sortKeys) newDict.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
                     bool first = true;
                     foreach (var keyValue in newDict) {
@@ -239,7 +230,7 @@ namespace Antigrav {
 
                         buf += _encoder(keyValue.Key);
                         buf += keySeparator;
-                        buf += _encode_basic_type(keyValue.Value, _current_indent_level);
+                        buf += _encode(keyValue.Value, _current_indent_level);
                     }
                     if (indent != null) {
                         _current_indent_level--;
@@ -249,7 +240,7 @@ namespace Antigrav {
                     return buf;
                 }
 
-                return _encode_basic_type(o, 0);
+                return _encode(o, 0);
             }
         }
     }
