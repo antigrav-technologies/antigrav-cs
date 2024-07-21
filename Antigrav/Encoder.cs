@@ -1,6 +1,6 @@
-﻿using System.Text.RegularExpressions;
-using System.Collections;
+﻿using System.Collections;
 using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace Antigrav {
     internal class Encoder {
@@ -62,12 +62,12 @@ namespace Antigrav {
             return '"' + ESCAPE_ASCII.Replace(s, m => replace(m)) + '"';
         }
         public class ANTIGRAVEncoder {
-            private string itemSeparator = ", ";
-            private string keySeparator = ": ";
+            private string itemSeparator = ",";
+            private string keySeparator = ":";
             private bool sortKeys;
             private uint? indent;
-            private bool ensure_ascii;
-            private bool allow_nan;
+            private bool ensureASCII;
+            private bool allowNaN;
             private bool skipKeys;
             private Func<object, string> custom_encoder;
 
@@ -81,14 +81,14 @@ namespace Antigrav {
             ) {
                 this.sortKeys = SortKeys;
                 this.indent = indent;
-                this.ensure_ascii = ensure_ascii;
-                this.allow_nan = allow_nan;
+                this.ensureASCII = ensure_ascii;
+                this.allowNaN = allow_nan;
                 this.skipKeys = skipKeys;
                 this.custom_encoder = custom_encoder;
             }
 
             public string Encode(object? o) {
-                Func<string, string> _encoder = ensure_ascii ? EncodeStringASCII : EncodeString;
+                Func<string, string> _encoder = ensureASCII ? EncodeStringASCII : EncodeString;
 
                 string _encode_integer(object o, bool prefix = true) => o switch {
                     sbyte b => b.ToString() + (prefix ? "b" : ""),
@@ -135,7 +135,7 @@ namespace Antigrav {
                     else if (_is_inf(o)) text = "inf";
                     else if (_is_ninf(o)) text = "-inf";
 
-                    if (!allow_nan && text != null) {
+                    if (!allowNaN && text != null) {
                         throw new ArgumentException($"Out of range float values are not JSON compliant: {o}");
                     }
 
@@ -160,7 +160,7 @@ namespace Antigrav {
                 string _encode_list(List<object> list, uint _current_indent_level) {
                     if (list.Count == 0) return "[]";
                     string buf = "[";
-                    string separator = itemSeparator;
+                    string separator = itemSeparator + ' ';
                     string? _newline_indent = null;
                     if (indent != null) {
                         _current_indent_level++;
@@ -185,7 +185,7 @@ namespace Antigrav {
                 string _encode_dict(Dictionary<object, object?> dict, uint _current_indent_level) {
                     if (dict.Count == 0) return "{}";
                     string buf = "{";
-                    string separator = itemSeparator;
+                    string separator = itemSeparator + ' ';
                     string? _newline_indent = null;
                     if (indent != null) {
                         _current_indent_level++;
@@ -221,7 +221,7 @@ namespace Antigrav {
                         else if (skipKeys) continue;
                         else throw new ArgumentException($"keys must be string, sbyte, byte, ushort, short, int, uint, long, float, double, bool or null, not {nameof(k)}");
                     }
-                    
+
                     if (sortKeys) newDict.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
                     bool first = true;
                     foreach (var keyValue in newDict) {
@@ -229,7 +229,7 @@ namespace Antigrav {
                         else buf += separator;
 
                         buf += _encoder(keyValue.Key);
-                        buf += keySeparator;
+                        buf += keySeparator + ' ';
                         buf += _encode(keyValue.Value, _current_indent_level);
                     }
                     if (indent != null) {

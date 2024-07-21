@@ -1,5 +1,5 @@
 ﻿namespace Antigrav {
-    public class Main {
+    public static class Main {
         /// <summary>
         /// Serialize object as an ANTIGRAV string
         /// </summary>
@@ -41,6 +41,19 @@
         /// <param name="skipKeys">If false then when not convertable to string keys pass in dictionaries throw ArgumentException. Otherwise just skip</param>
         /// <returns>ANTIGRAV serialized string</returns>
         /// <exception>ArgumentException, see <param>skipKeys</param>, <param>ensureASCII</param> and <param>allowNaN</param></exception>
+        /// <example><code>
+        /// Dictionary<string, int> value = new Dictionary<string, int> { {"1", 2}, {"3", 4} };
+        /// using (System.IO.StreamWriter writer = new System.IO.StreamWriter("D:\\toaster oven.txt")) {
+        ///     Antigrav.Main.Dump(value, writer.BaseStream, indent: 4);
+        /// }
+        /// /*
+        /// should write this to file:
+        /// {
+        ///     "1": 2
+        ///     "3": 4
+        /// }
+        /// */
+        /// </code></example>
         public static void Dump(
             object? o,
             System.IO.Stream stream,
