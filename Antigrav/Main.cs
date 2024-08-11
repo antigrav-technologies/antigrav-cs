@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace Antigrav;
+﻿namespace Antigrav;
 
 public static class Main {
     /// <summary>
@@ -22,11 +20,7 @@ public static class Main {
         bool ensureASCII = true,
         bool allowNaN = true,
         bool skipKeys = false
-    ) {
-        return new Encoder.ANTIGRAVEncoder(
-            sortKeys, indent, ensureASCII, allowNaN, skipKeys
-        ).Encode(o);
-    }
+    ) => Encoder.Encode(o, sortKeys, indent, ensureASCII, allowNaN, skipKeys);
 
     /// <summary>
     /// Write object serialized as an ANTIGRAV string to stream
@@ -62,18 +56,9 @@ public static class Main {
         bool ensureASCII = true,
         bool allowNaN = true,
         bool skipKeys = false
-    ) {
-        stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(
-            o,
-            sortKeys,
-            indent,
-            ensureASCII,
-            allowNaN,
-            skipKeys
-        )));
-    }
+    ) => stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(o, sortKeys, indent, ensureASCII, allowNaN, skipKeys)));
 
-    public static string DetectEncoding(byte[] bytes) {
+    private static string DetectEncoding(byte[] bytes) {
         if (bytes.Length >= 2 && (bytes[0] == 0xFE && bytes[1] == 0xFF || // UTF-32 BE
                                   bytes[0] == 0xFF && bytes[1] == 0xFE)) // UTF-32 LE
             return "utf-32";
@@ -111,7 +96,7 @@ public static class Main {
         return "utf-8";
     }
 
-    public static object Load(
+    public static object? Load(
         Stream stream,
         int offset,
         int bytes
@@ -119,11 +104,9 @@ public static class Main {
         byte[] buffer = new byte[bytes];
         stream.Read(buffer, offset, bytes);
         return LoadFromString(
-            Encoding.GetEncoding(DetectEncoding(buffer)).GetString(buffer)
+            System.Text.Encoding.GetEncoding(DetectEncoding(buffer)).GetString(buffer)
         );
     }
 
-    public static object LoadFromString(string s) {
-        return new Decoder.ANTIGRAVDecoder().Decode(s);
-    }
+    public static object? LoadFromString(string s) => Decoder.Decode(s);
 }

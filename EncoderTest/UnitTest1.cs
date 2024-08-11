@@ -130,42 +130,42 @@ namespace EncoderTest {
 
         [TestMethod]
         public void Encode_Complex1_2() {
-            Complex value = new Complex(1.0, 2.0);
+            Complex value = new(1.0, 2.0);
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("1+2i", json);
         }
 
         [TestMethod]
         public void Encode_ComplexPI_PHI() {
-            Complex value = new Complex(3.14, 1.618);
+            Complex value = new(3.14, 1.618);
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("3.14+1.618i", json);
         }
 
         [TestMethod]
         public void Encode_List_Int() {
-            List<int> value = new List<int> { 1, 2, 3 };
+            List<int> value = [1, 2, 3];
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("[1, 2, 3]", json);
         }
 
         [TestMethod]
         public void Encode_List_String() {
-            List<string> value = new List<string> { "a", "b", "c" };
+            List<string> value = ["a", "b", "c"];
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("[\"a\", \"b\", \"c\"]", json);
         }
 
         [TestMethod]
         public void Encode_Dictionary_String_String() {
-            Dictionary<string, string> value = new Dictionary<string, string> { { "a", "b" }, { "c", "d" } };
+            Dictionary<string, string> value = new() { { "a", "b" }, { "c", "d" } };
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("{\"a\": \"b\", \"c\": \"d\"}", json);
         }
 
         [TestMethod]
         public void Encode_Dictionary_Int_String() {
-            Dictionary<int, string> value = new Dictionary<int, string> { { 1, "a" }, { 2, "b" } };
+            Dictionary<int, string> value = new() { { 1, "a" }, { 2, "b" } };
             string json = Antigrav.Main.DumpToString(value);
             Assert.AreEqual("{\"1\": \"a\", \"2\": \"b\"}", json);
         }
@@ -174,9 +174,9 @@ namespace EncoderTest {
         public void Encode_Dictionary_Everything() {
             List<object> empty_list = [];
             List<short> list = [3, 4, 5];
-            Dictionary<object, object> empty_dict = new Dictionary<object, object>();
-            Dictionary<string, decimal> dict = new Dictionary<string, decimal> { { "1", 3M }, { "2", 31.45M } };
-            Dictionary<string, object?> value = new Dictionary<string, object?> {
+            Dictionary<object, object> empty_dict = [];
+            Dictionary<string, decimal> dict = new() { { "1", 3M }, { "2", 31.45M } };
+            Dictionary<string, object?> value = new() {
                 {"string", "жизнь и смерть в scheel 🦈🦈🦈"},
                 {"null", null},
                 {"true", true},
