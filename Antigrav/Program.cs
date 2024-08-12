@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace Antigrav;
+﻿namespace Antigrav;
 
 internal class Program {
     public static void Main() {

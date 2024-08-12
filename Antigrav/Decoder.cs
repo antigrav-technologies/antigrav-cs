@@ -1,9 +1,9 @@
-﻿using System;
+﻿using System.Numerics;
 using System.Text.RegularExpressions;
 using static Antigrav.Regexs;
 
 namespace Antigrav;
-public static class MatchEndExtension {
+public static class Extensions {
     public static int End(this Match match) => match.Index + match.Length;
     public static bool IsWhitespace(this char c) => " \t\n\r".Contains(c);
     public static bool IsWhitespace(this char? c) => c != null && ((char)c).IsWhitespace(); // "01234" 
@@ -259,72 +259,116 @@ internal partial class Decoder {
                 end += 5;
                 return false;
             }
-            Match match = COMPLEX().Match(s, end);
+            Match match;
+            match = COMPLEX().Match(s, end);
             if (match.Success) {
-                // yes
+                // миша☘️go to нахуй 😾собирайся в садик🏡идидиди 😭misha get up quickly 🥺ДА ИДЕ НАХУУУУУ 🐀😅
+                var realSign = match.Groups[1].Value;
+                var realRest = match.Groups[2].Value;
+                var imagSign = match.Groups[4].Value;
+                var imagRest = match.Groups[5].Value;
+
+                double real;
+                double imag;
+
+                if (realRest == "inf") real = double.PositiveInfinity;
+                else if (realRest == "nan") real = double.NaN;
+                else real = double.Parse(realRest);
+                if (realSign == "-") real *= -1;
+
+                if (imagRest == "inf") imag = double.PositiveInfinity;
+                else if (imagRest == "nan") imag = double.NaN;
+                else imag = double.Parse(imagRest);
+                if (imagSign == "-") imag *= -1;
+
+                end = match.End();
+                return new Complex(real, imag);
             }
             match = DECIMAL().Match(s, end);
             if (match.Success) {
-                // also yes
+                end = match.End();
+                return decimal.Parse(match.Groups[1].Value);
             }
             match = FLOAT().Match(s, end);
             if (match.Success) {
-                // yes
+                var sign = match.Groups[1].Value;
+                var rest = match.Groups[2].Value;
+                float value;
+
+                if (rest == "inf") value = float.PositiveInfinity;
+                else if (rest == "nan") value = float.NaN;
+                else value = float.Parse(rest);
+                if (sign == "-") value *= -1;
+
+                end = match.End();
+                return value;
             }
             match = DOUBLE().Match(s, end);
             if (match.Success) {
-                var value = match.Value;
+                var sign = match.Groups[1].Value;
+                var rest = match.Groups[2].Value;
+                double value;
 
-                if (value.Equals("inf", StringComparison.OrdinalIgnoreCase)) {
-                    return double.PositiveInfinity;
-                }
-                else if (value.Equals("nan", StringComparison.OrdinalIgnoreCase)) {
-                    return double.NaN;
-                }
-                else {
-                    // i am gonna type an extremely long comment instead of doing anything useful because why not
-                }
+                if (rest == "inf") value = double.PositiveInfinity;
+                else if (rest == "nan") value = double.NaN;
+                else value = double.Parse(rest);
+                if (sign == "-") value *= -1;
+
+                end = match.End();
+                return value;
             }
             // i will probably have to change the order of them
-            match = SBYTE().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = BYTE().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = SHORT().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = USHORT().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = INT().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = UINT().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = LONG().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
-            match = ULONG().Match(s, end);
-            if (match.Success) {
-                // yes
-            }
+            // УКРАЛИ СУКА ВСЁ ОТМЕНА
+            // update i finally changed the order
             match = LONGLONG().Match(s, end);
             if (match.Success) {
-                // yes
+                end = match.End();
+                return Int128.Parse(match.Groups[1].Value);
             }
             match = ULONGLONG().Match(s, end);
             if (match.Success) {
-                // yes
+                end = match.End();
+                return UInt128.Parse(match.Groups[1].Value);
+            }
+            match = LONG().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return long.Parse(match.Groups[1].Value);
+            }
+            match = ULONG().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return ulong.Parse(match.Groups[1].Value);
+            }
+            match = SBYTE().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return sbyte.Parse(match.Groups[1].Value);
+            }
+            match = BYTE().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return byte.Parse(match.Groups[1].Value);
+            }
+            match = SHORT().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return short.Parse(match.Groups[1].Value);
+            }
+            match = USHORT().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return ushort.Parse(match.Groups[1].Value);
+            }
+            match = UINT().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return uint.Parse(match.Groups[1].Value);
+            }
+            match = INT().Match(s, end);
+            if (match.Success) {
+                end = match.End();
+                return int.Parse(match.Groups[1].Value);
             }
             throw new StopIteration(end);
         }

@@ -85,10 +85,16 @@ internal static class Encoder {
         };
 
         string _format_float(object o) => o switch {
-            float f => f.ToString(),
-            double d => d.ToString(),
+            float f => 1e-15 < f && f < 1e15 ? f.ToString("0.0#########") : f.ToString(),
+            double d => 1e-7 < d && d < 1e7 ? d.ToString("0.0#########") : d.ToString(),
             decimal m => m.ToString(),
             _ => "idk bruvver it should never call"
+        };
+
+        bool _is_nan(object o) => o switch {
+            float f => float.IsNaN(f),
+            double d => double.IsNaN(d),
+            _ => false,
         };
 
         bool _is_inf(object o) => o switch {
@@ -106,12 +112,10 @@ internal static class Encoder {
         string _encode_float(object o) {
             string prefix = "";
             if (o is float) prefix = "F";
-            // if (o is double)
             if (o is decimal) prefix = "M";
 
             string? text = null;
-#pragma warning disable CS1718
-            if (o != o) text = "NaN";
+            if (_is_nan(o)) text = "NaN";
             else if (_is_inf(o)) text = "inf";
             else if (_is_ninf(o)) text = "-inf";
 

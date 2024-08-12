@@ -46,16 +46,17 @@ static partial class Regexs {
 
     [GeneratedRegex("(-?\\d+)LL", FLAGS)]
     public static partial Regex ULONGLONG();
-    
-    [GeneratedRegex("this thing is not finished", FLAGS | RegexOptions.IgnoreCase)]
+
+    [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)[Ff]", FLAGS)]
     public static partial Regex FLOAT();
 
-    [GeneratedRegex("([+-]?)(\\d+(?:\\.\\d+|e[+-]?\\d+)|(?:inf|nan))", RegexOptions.IgnoreCase)]
+    [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)", FLAGS)]
     public static partial Regex DOUBLE();
 
-    [GeneratedRegex("this thing is not finished", FLAGS)]
+    [GeneratedRegex("([-+]?\\d*(\\.\\d+)?)[Mm]", FLAGS)]
     public static partial Regex DECIMAL();
 
-    [GeneratedRegex("this thing is not finished", FLAGS)]
+    [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)" +
+                    "([+-])((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)i", FLAGS)]
     public static partial Regex COMPLEX();
 }
