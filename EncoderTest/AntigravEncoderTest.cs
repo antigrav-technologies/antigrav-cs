@@ -77,98 +77,98 @@ public class AntigravEncoderTest {
     [TestMethod]
     public void Encode_Float() {
         float value = 3.14f;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("3.14F", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("3.14F", antigrav);
     }
 
     [TestMethod]
     public void Encode_Double() {
         double value = 3.14;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("3.14", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("3.14", antigrav);
     }
 
     [TestMethod]
     public void Encode_Float1() {
         float value = 1.0f;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("1.0F", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("1.0F", antigrav);
     }
 
     [TestMethod]
     public void Encode_Decimal() {
         decimal value = 2.694102949283958052M;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("2.694102949283958052M", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("2.694102949283958052M", antigrav);
     }
 
     [TestMethod]
     public void Encode_Decimal1() {
         decimal value = 1M;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("1M", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("1M", antigrav);
     }
 
     [TestMethod]
     public void Encode_Null() {
         object? value = null;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("null", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("null", antigrav);
     }
     [TestMethod]
     public void Encode_Bool_True() {
         bool value = true;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("true", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("true", antigrav);
     }
 
     [TestMethod]
     public void Encode_Bool_False() {
         bool value = false;
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("false", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("false", antigrav);
     }
 
     [TestMethod]
     public void Encode_Complex1_2() {
         Complex value = new(1.0, 2.0);
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("1.0+2.0i", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("1.0+2.0i", antigrav);
     }
 
     [TestMethod]
     public void Encode_ComplexPI_PHI() {
         Complex value = new(3.14, 1.618);
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("3.14+1.618i", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("3.14+1.618i", antigrav);
     }
 
     [TestMethod]
     public void Encode_List_Int() {
         List<int> value = [1, 2, 3];
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("[1, 2, 3]", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("[1, 2, 3]", antigrav);
     }
 
     [TestMethod]
     public void Encode_List_String() {
         List<string> value = ["a", "b", "c"];
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("[\"a\", \"b\", \"c\"]", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("[\"a\", \"b\", \"c\"]", antigrav);
     }
 
     [TestMethod]
     public void Encode_Dictionary_String_String() {
         Dictionary<string, string> value = new() { { "a", "b" }, { "c", "d" } };
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("{\"a\": \"b\", \"c\": \"d\"}", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("{\"a\": \"b\", \"c\": \"d\"}", antigrav);
     }
 
     [TestMethod]
     public void Encode_Dictionary_Int_String() {
         Dictionary<int, string> value = new() { { 1, "a" }, { 2, "b" } };
-        string json = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("{\"1\": \"a\", \"2\": \"b\"}", json);
+        string antigrav = Antigrav.Main.DumpToString(value);
+        Assert.AreEqual("{\"1\": \"a\", \"2\": \"b\"}", antigrav);
     }
 
     [TestMethod]
