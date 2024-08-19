@@ -106,7 +106,7 @@ public class AntigravEncoderTest {
     public void Encode_Decimal1() {
         decimal value = 1M;
         string antigrav = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("1M", antigrav);
+        Assert.AreEqual("1.0M", antigrav);
     }
 
     [TestMethod]
@@ -168,7 +168,7 @@ public class AntigravEncoderTest {
     public void Encode_Dictionary_Int_String() {
         Dictionary<int, string> value = new() { { 1, "a" }, { 2, "b" } };
         string antigrav = Antigrav.Main.DumpToString(value);
-        Assert.AreEqual("{\"1\": \"a\", \"2\": \"b\"}", antigrav);
+        Assert.AreEqual("{1: \"a\", 2: \"b\"}", antigrav);
     }
 
     [TestMethod]
@@ -202,7 +202,7 @@ public class AntigravEncoderTest {
             {"empty dict", empty_dict}
         };
         string antigrav = Antigrav.Main.DumpToString(value, sortKeys: false, indent: 4);
-        Assert.AreEqual("{\n    \"string\": \"\\u0436\\u0438\\u0437\\u043d\\u044c \\u0438 \\u0441\\u043c\\u0435\\u0440\\u0442\\u044c \\u0432 scheel \\ud83e\\udd88\\ud83e\\udd88\\ud83e\\udd88\",\n    \"null\": null,\n    \"true\": true,\n    \"false\": false,\n    \"sbyte\": -73b,\n    \"byte\": 234B,\n    \"short\": -4892s,\n    \"ushort\": 4839S,\n    \"int\": 32,\n    \"uint\": 23I,\n    \"long\": 2348429482858735l,\n    \"ulong\": 3287534753486978L,\n    \"Int128\": 21437492358347ll,\n    \"UInt128\": 248073232487LL,\n    \"float\": 3.14F,\n    \"double\": 3.14,\n    \"decimal\": 3.14M,\n    \"\\u0441omplex\": 3.142+84.0i,\n    \"list\": [\n        3s,\n        4s,\n        5s\n    ],\n    \"empty list\": [],\n    \"dict\": {\n        \"1\": 3M,\n        \"2\": 31.45M\n    },\n    \"empty dict\": {}\n}",
+        Assert.AreEqual("{\n    \"string\": \"\\u0436\\u0438\\u0437\\u043d\\u044c \\u0438 \\u0441\\u043c\\u0435\\u0440\\u0442\\u044c \\u0432 scheel \\U0001f988\\U0001f988\\U0001f988\",\n    \"null\": null,\n    \"true\": true,\n    \"false\": false,\n    \"sbyte\": -73b,\n    \"byte\": 234B,\n    \"short\": -4892s,\n    \"ushort\": 4839S,\n    \"int\": 32,\n    \"uint\": 23I,\n    \"long\": 2348429482858735l,\n    \"ulong\": 3287534753486978L,\n    \"Int128\": 21437492358347ll,\n    \"UInt128\": 248073232487LL,\n    \"float\": 3.14F,\n    \"double\": 3.14,\n    \"decimal\": 3.14M,\n    \"\\u0441omplex\": 3.142+84.0i,\n    \"list\": [\n        3s,\n        4s,\n        5s\n    ],\n    \"empty list\": [],\n    \"dict\": {\n        \"1\": 3.0M,\n        \"2\": 31.45M\n    },\n    \"empty dict\": {}\n}",
             antigrav);
     }
 }

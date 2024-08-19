@@ -1,17 +1,19 @@
-﻿using System.Numerics;
+﻿using System.Collections;
+using System.Diagnostics;
+using System.Numerics;
 using System.Text.RegularExpressions;
 using static Antigrav.Regexs;
 
 namespace Antigrav;
-public static class Extensions {
+
+internal static partial class Extensions {
     public static int End(this Match match) => match.Index + match.Length;
-    public static bool IsWhitespace(this char c) => " \t\n\r".Contains(c);
-    public static bool IsWhitespace(this char? c) => c != null && ((char)c).IsWhitespace(); // "01234" 
-    public static string? SubstringSafe(this string s, int startIndex, int length) => startIndex + length <= s.Length ? s.Substring(startIndex, length) : null;
+    public static bool IsWhitespace(this char? c) => " \t\n\r".Contains(c ?? 'ъ');
+    public static string SubstringSafe(this string s, int startIndex, int length) => startIndex + length <= s.Length ? s.Substring(startIndex, length) : s[startIndex..];
     public static char? CharAt(this string s, int index) => index <= s.Length ? s[index] : null;
 }
 
-internal partial class Decoder {
+public class Decoder {
     private static readonly Dictionary<char, char> BACKSLASH = new() {
         {'"', '"'},
         {'\\', '\\'},
@@ -22,6 +24,67 @@ internal partial class Decoder {
         {'r', '\r'},
         {'t', '\t'}
     };
+
+    private class ConvertButNotReally {
+        public static Int128 ToInt128(object value) {
+            if (value is string str) return Int128.Parse(str);
+            if (value is Int128 int128Value) return int128Value;
+            if (value is UInt128 uint128Value) return (Int128)uint128Value;
+            if (value is sbyte sbyteValue) return (Int128)sbyteValue;
+            if (value is byte byteValue) return (Int128)byteValue;
+            if (value is short shortValue) return (Int128)shortValue;
+            if (value is ushort ushortValue) return (Int128)ushortValue;
+            if (value is int intValue) return (Int128)intValue;
+            if (value is uint uintValue) return (Int128)uintValue;
+            if (value is long longValue) return (Int128)longValue;
+            if (value is ulong ulongValue) return (Int128)ulongValue;
+            throw new ArgumentException("Cannot convert to Int128");
+        }
+
+        public static UInt128 ToUInt128(object value) {
+            if (value is string str) return UInt128.Parse(str);
+            if (value is Int128 int128Value) return (UInt128)int128Value;
+            if (value is UInt128 uint128Value) return uint128Value;
+            if (value is sbyte sbyteValue) return (UInt128)sbyteValue;
+            if (value is byte byteValue) return (UInt128)byteValue;
+            if (value is short shortValue) return (UInt128)shortValue;
+            if (value is ushort ushortValue) return (UInt128)ushortValue;
+            if (value is int intValue) return (UInt128)intValue;
+            if (value is uint uintValue) return (UInt128)uintValue;
+            if (value is long longValue) return (UInt128)longValue;
+            if (value is ulong ulongValue) return (UInt128)ulongValue;
+            throw new ArgumentException("Cannot convert to UInt128");
+        }
+
+        public static object? ChangeType(object? o, Type type) {
+            if (o == null) return null;
+            if (type == typeof(object)) return o;
+            Type[] args = type.GetGenericArguments();
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)) {
+                Type elementType = args[0];
+                Type listType = typeof(List<>).MakeGenericType(elementType);
+                object list = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType))!;
+                foreach (object item in (IEnumerable)o) {
+                    listType.GetMethod("Add")!.Invoke(list, [ChangeType(item, elementType)]);
+                }
+                return list;
+            }
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
+                Type keyType = args[0];
+                Type valueType = args[1];
+                var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
+                var dict = Activator.CreateInstance(dictType);
+                foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
+                    dictType.GetMethod("Add")!.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
+                }
+                return dict;
+            }
+            if (type == typeof(Int128)) return ToInt128(o);
+            if (type == typeof(UInt128)) return ToUInt128(o);
+            if (type == typeof(Complex)) return (Complex)o;
+            return Convert.ChangeType(o, type);
+        }
+    }
 
     private class StopIteration : Exception {
         public int Value { get; }
@@ -40,193 +103,127 @@ internal partial class Decoder {
             $"(char {pos})"
         ) {}
 
-    public static object? Decode(string s) {
-        int _decode_uXXXX(string s, int pos) {
-            string esc = s.Substring(pos + 1, 4);
-            if (esc.Length == 4 && 'x' == Char.ToLower(esc[1])) {
-                try {
-                    return Convert.ToInt32(esc, 16);
+    public static T? Decode<T>(string s) {
+        string _decode_string(ref int end) {
+            char _decode_uXXXX(ref int end) {
+                string uni = s.SubstringSafe(end, 4);
+                if (uni.Length == 4) {
+                    try {
+                        return Convert.ToChar(Convert.ToInt16(uni, 16));
+                    }
+                    catch (FormatException) { }
                 }
-                catch (FormatException) {
-                    // do nothing
-                }
+                throw new ANTIGRAVDecodeError("Invalid \\uXXXX escape", uni, end);
             }
-            throw new ANTIGRAVDecodeError("Invalid \\uXXXX escape", esc, pos);
-        }
-
-        string _decode_string(string s, ref int end) {
+            string _decode_uXXXXXXXX(ref int end) {
+                string uni = s.SubstringSafe(end, 8);
+                if (uni.Length == 8) {
+                    int codePoint = Convert.ToInt32(uni, 16);
+                    if (codePoint <= 0x10FFFF) return char.ConvertFromUtf32(codePoint);
+                }
+                throw new ANTIGRAVDecodeError("Invalid \\uXXXXXXXX escape", uni, end);
+            }
             string buf = "";
             int begin = end - 1;
             while (true) {
                 Match chunk = STRINGCHUNK().Match(s, end);
-                if (!chunk.Success) {
-                    throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
-                }
+                if (!chunk.Success) throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
                 end = chunk.End();
-                GroupCollection group = chunk.Groups;
-                string content = group[1].Value;
-                string terminator = group[2].Value;
-                if (!string.IsNullOrEmpty(content)) {
-                    buf += content;
-                }
-                if (terminator == "\"") {
-                    break;
-                }
-                else if (terminator != "\\") {
-                    throw new ANTIGRAVDecodeError($"Invalid control character {Regex.Escape(terminator)} at", s, end);
-                }
-                char esc;
-                try {
-                    esc = s[end];
-                }
-                catch (IndexOutOfRangeException) {
-                    throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
-                }
-                char c;
-                if (esc != 'u') {
+                buf += chunk.Groups[1].Value;
+                string terminator = chunk.Groups[2].Value;
+                if (terminator == "\"") break;
+                if (terminator != "\\") throw new ANTIGRAVDecodeError($"Invalid control character {Regex.Escape(terminator)} at", s, end);
+                char esc = s.CharAt(end++) ?? throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
+                if (!"Uu".Contains(esc)) {
                     if (BACKSLASH.TryGetValue(esc, out char value)) {
-                        c = value;
+                        buf += value;
                     }
                     else {
                         throw new ANTIGRAVDecodeError($"Invalid \\escape: {esc}", s, end);
                     }
                     end++;
                 }
-                else {
-                    int uni = _decode_uXXXX(s, end);
-                    end += 5;
-                    if (0xd800 <= uni && uni <= 0xdbff && s.Substring(end, 2) == "\\u") {
-                        int uni2 = _decode_uXXXX(s, end + 1);
-                        if (0xdc00 <= uni2 && uni2 <= 0xdfff) {
-                            uni = 0x10000 + (((uni - 0xd800) << 10) | (uni2 - 0xdc00));
-                            end += 6;
-                        }
-                    }
-                    c = (char)uni;
+                if (esc == 'u') {
+                    buf += _decode_uXXXX(ref end);
+                    end += 4;
                 }
-                buf += c;
+                if (esc == 'U') {
+                    buf += _decode_uXXXXXXXX(ref end);
+                    end += 8;
+                }
             }
             return buf;
         }
 
-        Dictionary<string, object?> _decode_dict(string s, ref int end) {
-            Dictionary<string, string> memo = [];
-            Dictionary<string, object?> pairs = [];
-
-            char? nextchar = s.CharAt(end);
-            if (nextchar != null && nextchar != '"') {
-                if (nextchar.IsWhitespace()) {
-                    end = WHITESPACE().Match(s, end).End();
-                    nextchar = s[end];
-                }
-                if (nextchar == '}') {
-                    end++;
-                    return [];
-                }
-                else if (nextchar != '"') {
-                    throw new ANTIGRAVDecodeError("Expecting property name enclosed in double quotes", s, end);
-                }
+        void _expect_char(ref int end, char c) {
+            _expect_whitespace(ref end);
+            if (s[end] != c) {
+                throw new ANTIGRAVDecodeError($"Expecting '{c}' delimiter", s, end);
             }
             end++;
-            while (true) {
-                string key = _decode_string(s, ref end);
-                if (memo.TryGetValue(key, out string? v)) {
-                    key = v;
-                }
-                else {
-                    memo.Add(key, key);
-                }
-                if (s.CharAt(end) != ':') {
-                    end = WHITESPACE().Match(s, end).End();
-                    if (s.CharAt(end) != ':') {
-                        throw new ANTIGRAVDecodeError("Expecting ':' delimiter", s, end);
-                    }
-                }
-                end++;
-
-                try {
-                    if (s[end].IsWhitespace()) {
-                        end++;
-                        if (s[end].IsWhitespace()) {
-                            end = WHITESPACE().Match(s, end).End();
-                        }
-                    }
-                }
-                catch (IndexOutOfRangeException) { }
-
-                object? value;
-                try {
-                    value = _decode(s, ref end);
-                }
-                catch (StopIteration err) {
-                    throw new ANTIGRAVDecodeError("Expecting value", s, err.Value);
-                }
-                pairs.Add(key, value);
-                try {
-                    nextchar = s[end];
-                    if (nextchar.IsWhitespace()) {
-                        end = WHITESPACE().Match(s, end + 1).End();
-                        nextchar = s[end];
-                    }
-                }
-                catch (ArgumentOutOfRangeException) {
-                    nextchar = null;
-                }
-                end++;
-
-                if (nextchar == '}') break;
-                if (nextchar != ',') throw new ANTIGRAVDecodeError("Expecting ',' delimiter", s, end - 1);
-
-                end = WHITESPACE().Match(s, end).End();
-                nextchar = s.CharAt(end);
-                end++;
-
-                if (nextchar != '"') throw new ANTIGRAVDecodeError("Expecting property name enclosed in double quotes", s, end - 1);
-            }
-            return pairs;
         }
 
-        List<object?> _decode_list(string s, ref int end) {
-            List<object?> values = [];
+        void _expect_whitespace(ref int end) {
+            end = WHITESPACE().Match(s, end).End();
+        }
+
+        Dictionary<object, object?> _decode_dict(ref int end) {
+            Dictionary<object, object?> pairs = [];
+
+            _expect_whitespace(ref end);
             char? nextchar = s.CharAt(end);
-            if (nextchar.IsWhitespace()) {
-                end = WHITESPACE().Match(s, end + 1).End();
-                nextchar = s.CharAt(end);
-                if (nextchar == ']') {
-                    end++;
-                    return values;
-                }
+            if (nextchar == '}') {
+                end++;
+                return pairs;
             }
+
             while (true) {
+                _expect_whitespace(ref end);
+                object key = _decode(ref end) ?? throw new ArgumentException("Dictionaries keys can't be null");
+
+                _expect_char(ref end, ':');
+                _expect_whitespace(ref end);
+
                 try {
-                    values.Add(_decode(s, ref end));
+                    pairs.Add(key, _decode(ref end));
                 }
                 catch (StopIteration err) {
                     throw new ANTIGRAVDecodeError("Expecting value", s, err.Value);
                 }
-                nextchar = s.CharAt(end);
-                if (nextchar.IsWhitespace()) {
-                    end = WHITESPACE().Match(s, end + 1).End();
-                    nextchar = s.CharAt(end);
-                }
-                end++;
-                if (nextchar == ']') break;
-                if (nextchar != ',') throw new ANTIGRAVDecodeError("Expecting ',' delimiter", s, end - 1);
 
-                try {
-                    if (s[end].IsWhitespace()) {
-                        end++;
-                        if (s[end].IsWhitespace()) {
-                            end = WHITESPACE().Match(s, end).End();
-                        }
-                    }
+                _expect_whitespace(ref end);
+                if (s.CharAt(end) == '}') {
+                    end++;
+                    return pairs;
                 }
-                catch (IndexOutOfRangeException) { }
+                _expect_char(ref end, ',');
             }
-            return values;
         }
 
-        object? _decode(string s, ref int end) {
+        List<object?> _decode_list(ref int end) {
+            List<object?> values = [];
+            _expect_whitespace(ref end);
+            char? nextchar = s.CharAt(end);
+            if (nextchar == ']') {
+                end++;
+                return values;
+            }
+            while (true) {
+                _expect_whitespace(ref end);
+                try {
+                    values.Add(_decode(ref end));
+                }
+                catch (StopIteration err) {
+                    throw new ANTIGRAVDecodeError("Expecting value", s, err.Value);
+                }
+                _expect_whitespace(ref end);
+                nextchar = s.CharAt(end++);
+                if (nextchar == ']') return values;
+                if (nextchar != ',') throw new ANTIGRAVDecodeError("Expecting ',' delimiter", s, end);
+            }
+        }
+
+        object? _decode(ref int end) {
             char nextchar;
             try {
                 nextchar = s[end];
@@ -237,15 +234,15 @@ internal partial class Decoder {
 
             if (nextchar == '"') {
                 end++;
-                return _decode_string(s, ref end);
+                return _decode_string(ref end);
             }
             if (nextchar == '{') {
                 end++;
-                return _decode_dict(s, ref end);
+                return _decode_dict(ref end);
             }
             if (nextchar == '[') {
                 end++;
-                return _decode_list(s, ref end);
+                return _decode_list(ref end);
             }
             if (nextchar == 'n' && s.SubstringSafe(end, 4) == "null") {
                 end += 4;
@@ -261,7 +258,7 @@ internal partial class Decoder {
             }
             Match match;
             match = COMPLEX().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 // миша☘️go to нахуй 😾собирайся в садик🏡идидиди 😭misha get up quickly 🥺ДА ИДЕ НАХУУУУУ 🐀😅
                 var realSign = match.Groups[1].Value;
                 var realRest = match.Groups[2].Value;
@@ -285,88 +282,92 @@ internal partial class Decoder {
                 return new Complex(real, imag);
             }
             match = DECIMAL().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return decimal.Parse(match.Groups[1].Value);
             }
             match = FLOAT().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 var sign = match.Groups[1].Value;
                 var rest = match.Groups[2].Value;
-                float value;
+                if (rest != null) {
+                    float value;
 
-                if (rest == "inf") value = float.PositiveInfinity;
-                else if (rest == "nan") value = float.NaN;
-                else value = float.Parse(rest);
-                if (sign == "-") value *= -1;
+                    if (rest == "inf") value = float.PositiveInfinity;
+                    else if (rest == "nan") value = float.NaN;
+                    else value = float.Parse(rest);
+                    if (sign == "-") value *= -1;
 
-                end = match.End();
-                return value;
+                    end = match.End();
+                    return value;
+                }
             }
             match = DOUBLE().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 var sign = match.Groups[1].Value;
                 var rest = match.Groups[2].Value;
-                double value;
+                if (rest != null) {
+                    double value;
 
-                if (rest == "inf") value = double.PositiveInfinity;
-                else if (rest == "nan") value = double.NaN;
-                else value = double.Parse(rest);
-                if (sign == "-") value *= -1;
+                    if (rest == "inf") value = double.PositiveInfinity;
+                    else if (rest == "nan") value = double.NaN;
+                    else value = double.Parse(rest);
+                    if (sign == "-") value *= -1;
 
-                end = match.End();
-                return value;
+                    end = match.End();
+                    return value;
+                }
             }
             // i will probably have to change the order of them
             // УКРАЛИ СУКА ВСЁ ОТМЕНА
             // update i finally changed the order
             match = LONGLONG().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return Int128.Parse(match.Groups[1].Value);
             }
             match = ULONGLONG().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return UInt128.Parse(match.Groups[1].Value);
             }
             match = LONG().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return long.Parse(match.Groups[1].Value);
             }
             match = ULONG().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return ulong.Parse(match.Groups[1].Value);
             }
             match = SBYTE().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return sbyte.Parse(match.Groups[1].Value);
             }
             match = BYTE().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return byte.Parse(match.Groups[1].Value);
             }
             match = SHORT().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return short.Parse(match.Groups[1].Value);
             }
             match = USHORT().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return ushort.Parse(match.Groups[1].Value);
             }
             match = UINT().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return uint.Parse(match.Groups[1].Value);
             }
             match = INT().Match(s, end);
-            if (match.Success) {
+            if (match.Success && match.Index == end) {
                 end = match.End();
                 return int.Parse(match.Groups[1].Value);
             }
@@ -374,6 +375,6 @@ internal partial class Decoder {
         }
 
         int idx = 0;
-        return _decode(s, ref idx);
+        return (T?)ConvertButNotReally.ChangeType(_decode(ref idx), typeof(T?));
     }
 }

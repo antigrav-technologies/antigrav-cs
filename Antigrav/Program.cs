@@ -1,4 +1,6 @@
-﻿namespace Antigrav;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Antigrav;
 
 internal class Program {
     public static void Main() {

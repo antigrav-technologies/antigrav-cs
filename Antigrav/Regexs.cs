@@ -3,13 +3,10 @@
 namespace Antigrav;
 
 static partial class Regexs {
-    private const RegexOptions FLAGS = RegexOptions.IgnorePatternWhitespace | RegexOptions.Multiline | RegexOptions.Singleline;
+    private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline;
 
     [GeneratedRegex("[\\x00-\\x1f\\\\\"\\b\\f\\n\\r\\t]")]
     public static partial Regex ESCAPE();
-
-    [GeneratedRegex("([\\\\\"]|[^\\ -~])")]
-    public static partial Regex ESCAPE_ASCII();
 
     [GeneratedRegex("(.*?)([\"\\\\\\x00-\\x1f])", FLAGS)]
     public static partial Regex STRINGCHUNK();
@@ -53,10 +50,10 @@ static partial class Regexs {
     [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)", FLAGS)]
     public static partial Regex DOUBLE();
 
-    [GeneratedRegex("([-+]?\\d*(\\.\\d+)?)[Mm]", FLAGS)]
+    [GeneratedRegex("([-+]?\\d+\\.\\d+)[Mm]", FLAGS)]
     public static partial Regex DECIMAL();
 
-    [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)" +
-                    "([+-])((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)i", FLAGS)]
+    [GeneratedRegex("([-+]?)((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)" +
+                    "([+-])((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)i", FLAGS)]
     public static partial Regex COMPLEX();
 }

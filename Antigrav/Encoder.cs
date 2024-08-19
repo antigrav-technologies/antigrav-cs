@@ -1,5 +1,8 @@
 ﻿using System.Collections;
+using System.Data;
+using System.Globalization;
 using System.Numerics;
+using System.Text;
 using System.Text.RegularExpressions;
 using static Antigrav.Regexs;
 
@@ -45,28 +48,36 @@ internal static class Encoder {
     private static string EncodeString(string s) {
         return '"' + ESCAPE().Replace(s, m => ESCAPE_DICT[m.Value[0]]) + '"';
     }
-    private static string EncodeStringASCII(string s) {
-        static string replace(Match match) {
-            char c = match.Value[0];
-            if (ESCAPE_DICT.TryGetValue(c, out string? value)) return value;
+    private static string EncodeStringASCII(string s) => '"' + string.Join("",
+        s.EnumerateRunes().Select(rune => 
+            rune.Value <= 0x7f ?
+            char.ToString((char)rune.Value) :
+            ESCAPE_DICT.TryGetValue((char)rune.Value, out string? value) ? value :
+            rune.Value < 0x10000 ? $"\\u{rune.Value:x4}" : $"\\U{rune.Value:x8}")
+    ) + '"';
 
-            int n = Convert.ToInt32(c);
-            if (n < 0x10000) return $"\\u{n:x4}";
+    // i hope i dont forget why i called a class so in the feature
+    private class NoneOfYourGoddamnBusinees : IComparer<object?> {
+        private static bool IsNumber(object? o) => o is sbyte or byte or ushort or short or int or uint or long or ulong or Int128 or UInt128 or float or double or decimal or Complex;
 
-            n -= 0x10000;
-            int s1 = 0xd800 | ((n >> 10) & 0x3ff);
-            int s2 = 0xdc00 | (n & 0x3ff);
-            return $"\\u{s1:x4}\\u{s2:x4}";
+        public int Compare(object? x, object? y) {
+            if (x is bool boolX) return y is bool boolY ? boolX ? boolY ? 0 : 1 : -1 : -1;
+
+            if (IsNumber(x)) {
+                if (!IsNumber(y)) return -1;
+                return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x, y is Complex complexY ? complexY.Real : y);
+            }
+            if (x is string stringX && y is string stringY) return String.Compare(stringX, stringY);
+            throw new ArgumentException($"Keys must be string, sbyte, byte, ushort, short, int, uint, long, ulong, Int128, UInt128, float, double, decimal, Complex or bool, not {nameof(x)} and/or {nameof(y)}");
         }
-        return '"' + ESCAPE_ASCII().Replace(s, m => replace(m)) + '"';
     }
+
     public static string Encode(
         object? o,
         bool sortKeys,
         uint? indent,
         bool ensureASCII,
-        bool allowNaN,
-        bool skipKeys
+        bool allowNaN
     ) {
         Func<string, string> _encoder = ensureASCII ? EncodeStringASCII : EncodeString;
 
@@ -85,9 +96,9 @@ internal static class Encoder {
         };
 
         string _format_float(object o) => o switch {
-            float f => 1e-15 < f && f < 1e15 ? f.ToString("0.0#########") : f.ToString(),
-            double d => 1e-7 < d && d < 1e7 ? d.ToString("0.0#########") : d.ToString(),
-            decimal m => m.ToString(),
+            float f => 1e-4f < f && f < 1e7f ? f.ToString("0.0#####") : f.ToString(),
+            double d => 1e-4 < d && d < 1e15 ? d.ToString("0.0#############") : d.ToString(),
+            decimal m => m.ToString("0.0#############################"),
             _ => "idk bruvver it should never call"
         };
 
@@ -133,11 +144,11 @@ internal static class Encoder {
             null => "null",
             true => "true",
             false => "false",
-            { } when o is sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 => _encode_integer(o),
-            { } when o is float or double or decimal => _encode_float(o),
+            sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 => _encode_integer(o),
+            float or double or decimal => _encode_float(o),
             Complex c => $"{_format_float(c.Real)}+{_format_float(c.Imaginary)}i",
-            { } when o is IList e => _encode_list(e.Cast<object>().ToList(), _current_indent_level),
-            { } when o is IDictionary d => _encode_dict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level),
+            IList e => _encode_list(e.Cast<object>().ToList(), _current_indent_level),
+            IDictionary d => _encode_dict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level),
             _ => throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}")
         };
 
@@ -178,41 +189,13 @@ internal static class Encoder {
                 buf += _newline_indent;
             }
 
-            Dictionary<string, object?> newDict = [];
-
-            foreach (var keyValue in dict) {
-                object k = keyValue.Key;
-                object? v = keyValue.Value;
-
-                if (k is null) {
-                    newDict.Add("null", v);
-                }
-                else if (k is string s) {
-                    newDict.Add(s, v);
-                }
-                else if (k is true) {
-                    newDict.Add("true", v);
-                }
-                else if (k is false) {
-                    newDict.Add("false", v);
-                }
-                else if (k is sbyte or byte or ushort or short or int or uint or long or ulong or Int128 or UInt128) {
-                    newDict.Add(_encode_integer(k, prefix: false), v);
-                }
-                else if (k is float || k is double || k is decimal) {
-                    newDict.Add(_encode_float(k), v);
-                }
-                else if (skipKeys) continue;
-                else throw new ArgumentException($"keys must be string, sbyte, byte, ushort, short, int, uint, long, float, double, bool or null, not {nameof(k)}");
-            }
-
-            if (sortKeys) newDict = newDict.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
+            if (sortKeys) dict = dict.OrderBy(x => x.Key, new NoneOfYourGoddamnBusinees()).ToDictionary(x => x.Key, x => x.Value);
             bool first = true;
-            foreach (var keyValue in newDict) {
+            foreach (var keyValue in dict) {
                 if (first) first = false;
                 else buf += separator;
 
-                buf += _encoder(keyValue.Key);
+                buf += _encode(keyValue.Key, _current_indent_level);
                 buf += ": ";
                 buf += _encode(keyValue.Value, _current_indent_level);
             }
