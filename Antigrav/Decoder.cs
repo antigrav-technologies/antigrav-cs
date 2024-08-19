@@ -122,14 +122,8 @@ public class Decoder {
         }
     }
 
-    private class StopIteration : Exception {
-        public int Value { get; }
-
-        public StopIteration() : base("Stop iteration") { }
-
-        public StopIteration(int value) : base("Stop iteration") {
-            Value = value;
-        }
+    private class StopIteration(int? value = null) : Exception("Stop iteration") {
+        public int? Value { get; } = value;
     }
 
     public class ANTIGRAVDecodeError(string msg, string doc, int pos) : Exception(
@@ -224,7 +218,7 @@ public class Decoder {
                     pairs.Add(key, _decode(ref end));
                 }
                 catch (StopIteration err) {
-                    throw new ANTIGRAVDecodeError("Expecting value", s, err.Value);
+                    throw new ANTIGRAVDecodeError("Expecting value", s, (int)err.Value!);
                 }
 
                 _expect_whitespace(ref end);
@@ -250,7 +244,7 @@ public class Decoder {
                     values.Add(_decode(ref end));
                 }
                 catch (StopIteration err) {
-                    throw new ANTIGRAVDecodeError("Expecting value", s, err.Value);
+                    throw new ANTIGRAVDecodeError("Expecting value", s, (int)err.Value!);
                 }
                 _expect_whitespace(ref end);
                 nextchar = s.CharAt(end++);
