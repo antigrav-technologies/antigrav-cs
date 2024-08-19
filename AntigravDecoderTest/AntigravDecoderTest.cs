@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using static Antigrav.Main;
 
 namespace DecoderTest;
 
@@ -183,5 +184,82 @@ public class AntigravDecoderTest {
             Console.WriteLine($"    {kwp.Key}: {(kwp.Value is List<object> l ? '[' + string.Join(", ", l) + ']' : kwp.Value is Dictionary<object, object> d ? '{' + string.Join(": ", d.Select(kwp => $"{kwp.Key}: {kwp.Value}")) + '}' : kwp.Value)}");
         }
         Console.WriteLine("}");
+    }
+    [TestMethod]
+    public void Decode_Array_Int() {
+        string antigrav = "[1, 2, 4, 6, 280]";
+        int[] value = LoadFromString<int[]>(antigrav)!;
+        CollectionAssert.AreEqual(new int[] {1, 2, 4, 6, 280}, value);
+    }
+    [TestMethod]
+    public void Decode_Array_String() {
+        string antigrav = "[\"a\", \"b\", \"qwertyuiop\"]";
+        string[] value = LoadFromString<string[]>(antigrav)!;
+        CollectionAssert.AreEqual(new string[] { "a", "b", "qwertyuiop" }, value);
+    }
+
+    // due the laziness i just stole head first c# code
+    private enum Values {
+        Ace = 1,
+        Two = 2,
+        Three = 3,
+        Four = 4,
+        Five = 5,
+        Six = 6,
+        Seven = 7,
+        Eight = 8,
+        Nine = 9,
+        Ten = 10,
+        Jack = 11,
+        Queen = 12,
+        King = 13,
+    }
+    private enum Suits {
+        Diamonds,
+        Clubs,
+        Hearts,
+        Spades,
+    }
+    private class Card {
+        public Card() {
+            Value = null;
+            Suit = null;
+        }
+        public Card(Values value, Suits suit) {
+            Value = value;
+            Suit = suit;
+        }
+        [AntigravProperty("value")]
+        public Values? Value { get; private set; }
+        [AntigravProperty("suit")]
+        public Suits? Suit { get; private set; }
+        public override string ToString() => $"{Value} of {Suit}";
+    }
+
+    [TestMethod]
+    public void Decode_Enum() {
+        string antigrav = "1";
+        Values value = LoadFromString<Values>(antigrav)!;
+        Assert.AreEqual(Values.Ace, value);
+    }
+    [TestMethod]
+    public void Decode_NullableEnum() {
+        string antigrav = "1";
+        Values? value = LoadFromString<Values?>(antigrav);
+        Values? ace = Values.Ace;
+        Assert.AreEqual(ace, value);
+    }
+    [TestMethod]
+    public void Decode_NullableEnumList() {
+        string antigrav = "[1, 2, 3, null, 4]";
+        List<Values?> value = LoadFromString<List<Values?>>(antigrav)!;
+        CollectionAssert.AreEqual(new List<Values?> { Values.Ace, Values.Two, Values.Three, null, Values.Four}, value);
+    }
+    [TestMethod]
+    public void Decode_Object() {
+        string antigrav = "{\"value\": 1, \"suit\": 3}";
+        Card value = LoadFromString<Card>(antigrav)!;
+        Console.WriteLine(value.ToString());
+        Assert.IsTrue(Values.Ace == value.Value && Suits.Spades == value.Suit);
     }
 }

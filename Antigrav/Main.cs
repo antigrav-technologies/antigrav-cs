@@ -4,6 +4,25 @@ namespace Antigrav;
 
 public static class Main {
     /// <summary>
+    /// Provides metadata to make property serializable
+    /// </summary>
+    /// <param name="name">The name of the property in the serialized output. If not specified then original name is used</param>
+    /// <param name="defaultValue">Default value for the property if it's missing</param>
+    [AttributeUsage(AttributeTargets.Property)]
+    public class AntigravProperty : Attribute {
+        public string? Name { get; }
+        public object? DefaultValue { get; }
+        public AntigravProperty(string? name = null, object? defaultValue = null) {
+            Name = name;
+            DefaultValue = defaultValue;
+        }
+        public AntigravProperty(string? name) {
+            Name = name;
+            DefaultValue = null;
+        }
+    }
+
+    /// <summary>
     /// Serialize object as an Antigrav string
     /// </summary>
     /// <param name="o">Object to serialze</param>

@@ -2,6 +2,7 @@
 using System.Data;
 using System.Globalization;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using static Antigrav.Regexs;
@@ -81,7 +82,7 @@ internal static class Encoder {
     ) {
         Func<string, string> _encoder = ensureASCII ? EncodeStringASCII : EncodeString;
 
-        string _encode_integer(object o, bool prefix = true) => o switch {
+        static string _encode_integer(object o, bool prefix = true) => o switch {
             sbyte b => b.ToString() + (prefix ? "b" : ""),
             byte B => B.ToString() + (prefix ? "B" : ""),
             short s => s.ToString() + (prefix ? "s" : ""),
@@ -95,26 +96,26 @@ internal static class Encoder {
             _ => "at this point i dont know this should never run"
         };
 
-        string _format_float(object o) => o switch {
+        static string _format_float(object o) => o switch {
             float f => 1e-4f < f && f < 1e7f ? f.ToString("0.0#####") : f.ToString(),
             double d => 1e-4 < d && d < 1e15 ? d.ToString("0.0#############") : d.ToString(),
             decimal m => m.ToString("0.0#############################"),
             _ => "idk bruvver it should never call"
         };
 
-        bool _is_nan(object o) => o switch {
+        static bool _is_nan(object o) => o switch {
             float f => float.IsNaN(f),
             double d => double.IsNaN(d),
             _ => false,
         };
 
-        bool _is_inf(object o) => o switch {
+        static bool _is_inf(object o) => o switch {
             float f => float.IsInfinity(f),
             double d => double.IsInfinity(d),
             _ => false,
         };
 
-        bool _is_ninf(object o) => o switch {
+        static bool _is_ninf(object o) => o switch {
             float f => float.IsNegativeInfinity(f),
             double d => double.IsNegativeInfinity(d),
             _ => false,
@@ -145,12 +146,23 @@ internal static class Encoder {
             true => "true",
             false => "false",
             sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 => _encode_integer(o),
+            Enum @enum => _encode_integer(Convert.ChangeType(@enum, Enum.GetUnderlyingType(@enum.GetType()))),
             float or double or decimal => _encode_float(o),
             Complex c => $"{_format_float(c.Real)}+{_format_float(c.Imaginary)}i",
             IList e => _encode_list(e.Cast<object>().ToList(), _current_indent_level),
             IDictionary d => _encode_dict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level),
-            _ => throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}")
+            _ => _encode_dict(_object_to_dict(o), _current_indent_level)
         };
+
+        static Dictionary<object, object?> _object_to_dict(object o) {
+            Dictionary<object, object?> dictionary = [];
+            foreach (PropertyInfo property in o.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+                Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
+                if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? property.Name, property.GetValue(o));
+            }
+            if (dictionary.Count == 0) throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}");
+            return dictionary;
+        }
 
         string _encode_list(List<object> list, uint _current_indent_level) {
             if (list.Count == 0) return "[]";

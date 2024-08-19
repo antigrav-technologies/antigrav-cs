@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Diagnostics;
 using System.Numerics;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using static Antigrav.Regexs;
 
@@ -56,14 +57,45 @@ public class Decoder {
             throw new ArgumentException("Cannot convert to UInt128");
         }
 
+        public static object? DecodeObject(object o, Type type) {
+            if (o is not Dictionary<object, object>) return null;
+            object? target;
+            try {
+                target = Activator.CreateInstance(type);
+            } catch (MissingMethodException) { throw new MissingMethodException($"Type {type} does not have parameterless constructor and cannot be created"); }
+            bool converted = false;
+            var dictionary = (Dictionary<string, object?>)ChangeType(o, typeof(Dictionary<string, object?>))!;
+            foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+                Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
+                if (antigravProperty != null) {
+                    string name = antigravProperty.Name ?? property.Name;
+                    var value = antigravProperty.DefaultValue;
+                    if (dictionary.TryGetValue(name, out var v)) value = v;
+                    property.SetValue(target, ChangeType(value, property.PropertyType));
+                    converted = true;
+                }
+            }
+            return converted ? target : null;
+        }
+
         public static object? ChangeType(object? o, Type type) {
             if (o == null) return null;
+            type = Nullable.GetUnderlyingType(type) ?? type;
             if (type == typeof(object)) return o;
             Type[] args = type.GetGenericArguments();
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>)) {
+            if (type.IsArray) {
+                Type elementType = type.GetElementType()!;
+                Array array = Array.CreateInstance(elementType, ((ICollection)o).Count);
+                int i = 0;
+                foreach (object item in (IEnumerable)o) {
+                    array.SetValue(ChangeType(item, elementType), i++);
+                }
+                return array;
+            }
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) || type == typeof(IList)) {
                 Type elementType = args[0];
                 Type listType = typeof(List<>).MakeGenericType(elementType);
-                object list = Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType))!;
+                object list = Activator.CreateInstance(listType)!;
                 foreach (object item in (IEnumerable)o) {
                     listType.GetMethod("Add")!.Invoke(list, [ChangeType(item, elementType)]);
                 }
@@ -82,6 +114,10 @@ public class Decoder {
             if (type == typeof(Int128)) return ToInt128(o);
             if (type == typeof(UInt128)) return ToUInt128(o);
             if (type == typeof(Complex)) return (Complex)o;
+            if (type.IsEnum) return Enum.ToObject(type, o);
+            if (type == typeof(string)) return (string)o;
+            object? o_ = DecodeObject(o, type);
+            if (o_ != null) return o_;
             return Convert.ChangeType(o, type);
         }
     }
