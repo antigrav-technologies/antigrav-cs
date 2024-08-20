@@ -114,7 +114,7 @@ namespace Antigrav {
                 catch (MissingMethodException) { throw new MissingMethodException($"Type {type} does not have parameterless constructor and cannot be created"); }
                 bool converted = false;
                 var dictionary = (Dictionary<string, object?>)ChangeType(o, typeof(Dictionary<string, object?>))!;
-                foreach (var property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
+                foreach (var property in type.GetProperties()) {
                     Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
                     if (antigravProperty != null) {
                         string name = antigravProperty.Name ?? property.Name;
@@ -127,7 +127,7 @@ namespace Antigrav {
                         converted = true;
                     }
                 }
-                foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance)) {
+                foreach (var field in type.GetFields()) {
                     Main.AntigravProperty? antigravField = field.GetCustomAttribute<Main.AntigravProperty>();
                     if (antigravField != null) {
                         string name = antigravField.Name ?? field.Name;

@@ -13,9 +13,9 @@
     <PackageIcon>icon.png</PackageIcon>
     <RepositoryType>git</RepositoryType>
     <PackageTags>serializing;antigrav</PackageTags>
-    <AssemblyVersion>1.0</AssemblyVersion>
+    <AssemblyVersion>1.0.1</AssemblyVersion>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <FileVersion>1.0</FileVersion>
+    <FileVersion>1.0.1</FileVersion>
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <Copyright>MIT</Copyright>
     <RepositoryUrl>https://github.com/tema5002/antigrav-cs</RepositoryUrl>

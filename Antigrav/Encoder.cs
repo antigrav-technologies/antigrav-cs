@@ -154,7 +154,7 @@ internal static class Encoder {
 
         static Dictionary<object, object?> _object_to_dict(object o) {
             Dictionary<object, object?> dictionary = [];
-            foreach (MemberInfo member in o.GetType().GetMembers(BindingFlags.Public | BindingFlags.Instance).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
+            foreach (MemberInfo member in o.GetType().GetMembers().Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
                 Main.AntigravProperty? antigravProperty = member.GetCustomAttribute<Main.AntigravProperty>();
                 Main.AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<Main.AntigravExtensionData>();
                 if (member is PropertyInfo property) {
