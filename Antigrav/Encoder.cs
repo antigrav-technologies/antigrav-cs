@@ -1,11 +1,8 @@
 ﻿using System.Collections;
 using System.Data;
-using System.Globalization;
 using System.Numerics;
 using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
-using static Antigrav.Regexs;
+using System.Runtime.CompilerServices;
 
 namespace Antigrav;
 
@@ -47,7 +44,7 @@ internal static class Encoder {
         {'\x1f', "\\u001f"}
     };
     private static string EncodeString(string s) {
-        return '"' + ESCAPE().Replace(s, m => ESCAPE_DICT[m.Value[0]]) + '"';
+        return '"' + s.Select(x => ESCAPE_DICT.TryGetValue(x, out string? value) ? value : char.ToString(x)).ToString() + '"';
     }
     private static string EncodeStringASCII(string s) => '"' + string.Join("",
         s.EnumerateRunes().Select(rune => 
@@ -148,23 +145,34 @@ internal static class Encoder {
             sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 => _encode_integer(o),
             Enum @enum => _encode_integer(Convert.ChangeType(@enum, Enum.GetUnderlyingType(@enum.GetType()))),
             float or double or decimal => _encode_float(o),
+            ITuple t => _encode_list(t.GetType().GetProperties().Select(p => p.GetValue(t)).ToList(), _current_indent_level),
             Complex c => $"{_format_float(c.Real)}+{_format_float(c.Imaginary)}i",
-            IList e => _encode_list(e.Cast<object>().ToList(), _current_indent_level),
             IDictionary d => _encode_dict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level),
+            ICollection c => _encode_list(c.Cast<object?>().ToList(), _current_indent_level),
             _ => _encode_dict(_object_to_dict(o), _current_indent_level)
         };
 
         static Dictionary<object, object?> _object_to_dict(object o) {
             Dictionary<object, object?> dictionary = [];
-            foreach (PropertyInfo property in o.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)) {
-                Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
-                if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? property.Name, property.GetValue(o));
+            foreach (MemberInfo member in o.GetType().GetMembers(BindingFlags.Public | BindingFlags.Instance).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
+                Main.AntigravProperty? antigravProperty = member.GetCustomAttribute<Main.AntigravProperty>();
+                Main.AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<Main.AntigravExtensionData>();
+                if (member is PropertyInfo property) {
+                    if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? property.Name, property.GetValue(o));
+                    if (antigravExtensionData != null) {
+                        dictionary = dictionary.Concat(((IDictionary)property.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)property.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
+                    }
+                }
+                if (member is FieldInfo field) {
+                    if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? field.Name, field.GetValue(o));
+                    if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)field.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)field.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
+                }
             }
-            if (dictionary.Count == 0) throw new ArgumentException($"Type is not ANTIGRAV Serializable: {o.GetType()}");
+            if (dictionary.Count == 0) throw new ArgumentException($"Type is not Antigrav Serializable: {o.GetType()}");
             return dictionary;
         }
 
-        string _encode_list(List<object> list, uint _current_indent_level) {
+        string _encode_list(List<object?> list, uint _current_indent_level) {
             if (list.Count == 0) return "[]";
             string buf = "[";
             string separator = ", ";
@@ -176,7 +184,7 @@ internal static class Encoder {
                 buf += _newline_indent;
             }
             bool first = true;
-            foreach (object value in list) {
+            foreach (object? value in list) {
                 if (first) first = false;
                 else buf += separator;
                 buf += _encode(value, _current_indent_level);

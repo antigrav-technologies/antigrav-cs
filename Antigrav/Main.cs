@@ -1,27 +1,41 @@
-﻿using System.Text.Json;
-
-namespace Antigrav;
-
+﻿namespace Antigrav;
 public static class Main {
     /// <summary>
     /// Provides metadata to make property serializable
     /// </summary>
     /// <param name="name">The name of the property in the serialized output. If not specified then original name is used</param>
     /// <param name="defaultValue">Default value for the property if it's missing</param>
-    [AttributeUsage(AttributeTargets.Property)]
-    public class AntigravProperty : Attribute {
-        public string? Name { get; }
-        public object? DefaultValue { get; }
-        public AntigravProperty(string? name = null, object? defaultValue = null) {
-            Name = name;
-            DefaultValue = defaultValue;
-        }
-        public AntigravProperty(string? name) {
-            Name = name;
-            DefaultValue = null;
-        }
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+    public class AntigravProperty(string? name = null, object? defaultValue = null) : Attribute {
+        public string? Name { get; } = name;
+        public object? DefaultValue { get; } = defaultValue;
     }
+    /// <summary>
+    /// When placed on a property of type System.Collections.Generic.IDictionary`2, any
+    /// properties that do not have a matching member are added to that dictionary during
+    /// deserialization and written during serialization.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+    public class AntigravExtensionData : Attribute {}
 
+    /// <summary>
+    /// Write object serialized as an Antigrav string to stream
+    /// </summary>
+    /// <param name="o">Object to serialze</param>
+    /// <param name="filePath"></param>
+    /// <param name="sortKeys"Sort keys in dictionaries></param>
+    /// <param name="indent">Amount of spaces to indent, no indent if null</param>
+    /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
+    /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+    /// <exception cref="ArgumentException"></exception>
+    public static void DumpToFile(
+        object? o,
+        string filePath,
+        bool sortKeys = false,
+        uint? indent = null,
+        bool ensureASCII = true,
+        bool allowNaN = true
+    ) => File.WriteAllText(filePath, DumpToString(o, sortKeys, indent, ensureASCII, allowNaN));
     /// <summary>
     /// Serialize object as an Antigrav string
     /// </summary>
@@ -31,7 +45,7 @@ public static class Main {
     /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
     /// <returns>Antigrav serialized string</returns>
-    /// <exception>ArgumentException, see <param>ensureASCII</param> and <param>allowNaN</param></exception>
+    /// <exception cref="ArgumentException"></exception>
     public static string DumpToString(
         object? o,
         bool sortKeys = false,
@@ -48,8 +62,6 @@ public static class Main {
     /// <param name="indent">Amount of spaces to indent, no indent if null</param>
     /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
-    /// <returns>Antigrav serialized string</returns>
-    /// <exception>ArgumentException, see <param>ensureASCII</param> and <param>allowNaN</param></exception>
     /// <example><code>
     /// Dictionary<string, int> value = new Dictionary<string, int> { {"1", 2}, {"3", 4} };
     /// using (System.IO.StreamWriter writer = new System.IO.StreamWriter("D:\\toaster oven.txt")) {
@@ -63,6 +75,7 @@ public static class Main {
     /// }
     /// */
     /// </code></example>
+    /// <exception cref="ArgumentException"></exception>
     public static void Dump(
         object? o,
         Stream stream,
@@ -110,6 +123,15 @@ public static class Main {
         return "utf-8";
     }
 
+    /// <summary>
+    /// Deserialize stream contating Antigrav serialized object to a C# object
+    /// </summary>
+    /// <typeparam name="T">Object type to deserialize</typeparam>
+    /// <param name="stream">Stream to read</param>
+    /// <returns>Deserialized object</returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
+    /// <exception cref="MissingMethodException"></exception>
     public static T? Load<T>(
         Stream stream,
         int offset,
@@ -121,6 +143,25 @@ public static class Main {
             System.Text.Encoding.GetEncoding(DetectEncoding(buffer)).GetString(buffer)
         );
     }
-
+    /// <summary>
+    /// Deserialize Antigrav serialized string to a C# object
+    /// </summary>
+    /// <typeparam name="T">Object type to deserialize</typeparam>
+    /// <param name="s">String to deserialize</param>
+    /// <returns>Deserialized object</returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
+    /// <exception cref="MissingMethodException"></exception>
     public static T? LoadFromString<T>(string s) => Decoder.Decode<T>(s);
+
+    /// <summary>
+    /// Deserialize file containing Antigrav serialized object to a C# object
+    /// </summary>
+    /// <typeparam name="T">Object type to deserialize</typeparam>
+    /// <param name="filePath">File to read</param>
+    /// <returns>Deserialized object</returns>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
+    /// <exception cref="MissingMethodException"></exception>
+    public static T? LoadFromFile<T>(string filePath) => Decoder.Decode<T>(File.ReadAllText(filePath));
 }

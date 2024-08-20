@@ -250,4 +250,24 @@ public class AntigravEncoderTest {
         string antigrav = DumpToString(value);
         Assert.AreEqual("{\"value\": 1, \"suit\": 3}", antigrav);
     }
+    private class ExtensionDataTestClass {
+        [AntigravProperty]
+        public Card Card1 = new(Values.Ace, Suits.Spades);
+        [AntigravProperty("card name or not really idk")]
+        public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
+        [AntigravExtensionData]
+        public Dictionary<string, int> extensionData = new() { { "a", 2 }, { "b", 314 } };
+    }
+    [TestMethod]
+    public void Encode_ObjectWithExtensionData() {
+        ExtensionDataTestClass value = new();
+        string antigrav = DumpToString(value);
+        Assert.AreEqual("{\"card name or not really idk\": {\"value\": 7, \"suit\": 0}, \"Card1\": {\"value\": 1, \"suit\": 3}, \"a\": 2, \"b\": 314}", antigrav);
+    }
+    [TestMethod]
+    public void Encode_TuplesList() {
+        List <Tuple<int, int>> value = [new Tuple<int, int>(12, 34), new Tuple<int, int>(34, 45)];
+        string antigrav = DumpToString(value);
+        Assert.AreEqual("[[12, 34], [34, 45]]", antigrav);
+    }
 }

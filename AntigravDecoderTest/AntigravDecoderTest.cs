@@ -235,6 +235,21 @@ public class AntigravDecoderTest {
         public Suits? Suit { get; private set; }
         public override string ToString() => $"{Value} of {Suit}";
     }
+    private class CardButWithFields {
+        public CardButWithFields() {
+            Value = null;
+            Suit = null;
+        }
+        public CardButWithFields(Values value, Suits suit) {
+            Value = value;
+            Suit = suit;
+        }
+        [AntigravProperty("value")]
+        public Values? Value;
+        [AntigravProperty("suit")]
+        public Suits? Suit;
+        public override string ToString() => $"{Value} of {Suit}";
+    }
 
     [TestMethod]
     public void Decode_Enum() {
@@ -261,5 +276,35 @@ public class AntigravDecoderTest {
         Card value = LoadFromString<Card>(antigrav)!;
         Console.WriteLine(value.ToString());
         Assert.IsTrue(Values.Ace == value.Value && Suits.Spades == value.Suit);
+    }
+    [TestMethod]
+    public void Decode_ObjectWithFields() {
+        string antigrav = "{\"value\": 1, \"suit\": 3}";
+        CardButWithFields value = LoadFromString<CardButWithFields>(antigrav)!;
+        Console.WriteLine(value.ToString());
+        Assert.IsTrue(Values.Ace == value.Value && Suits.Spades == value.Suit);
+    }
+    private class ExtensionDataTestClass {
+        [AntigravProperty]
+        public Card Card1 = new(Values.Ace, Suits.Spades);
+        [AntigravProperty("card name or not really idk")]
+        public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
+        [AntigravExtensionData]
+        public Dictionary<string, int> extensionData = new() { { "a", 2 }, { "b", 314 } };
+    }
+    [TestMethod]
+    public void Decode_ObjectWithExtensionData() {
+        string antigrav = "{\"card name or not really idk\": {\"value\": 7, \"suit\": 0}, \"Card1\": {\"value\": 1, \"suit\": 3}, \"a\": 2, \"b\": 314}";
+        ExtensionDataTestClass value = LoadFromString<ExtensionDataTestClass>(antigrav)!;
+        ExtensionDataTestClass expected = new();
+        Assert.IsTrue(expected.Card1.Value == value.Card1.Value && expected.Card1.Suit == value.Card1.Suit);
+        Assert.IsTrue(expected.Card2.Value == value.Card2.Value && expected.Card2.Suit == value.Card2.Suit);
+        CollectionAssert.AreEqual(expected.extensionData, value.extensionData);
+    }
+    [TestMethod]
+    public void Decode_TuplesList() {
+        string antigrav = "[[12, 34], [34, 45]]";
+        List<Tuple<int, int>> value = LoadFromString<List<Tuple<int, int>>>(antigrav)!;
+        CollectionAssert.AreEqual(new List<Tuple<int, int>>() { new(12, 34), new(34, 45) }, value);
     }
 }
