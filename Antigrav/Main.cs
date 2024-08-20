@@ -1,4 +1,5 @@
 ﻿namespace Antigrav;
+
 public static class Main {
     /// <summary>
     /// Provides metadata to make property serializable
