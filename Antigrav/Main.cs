@@ -16,7 +16,7 @@ public static class Main {
     /// deserialization and written during serialization.
     /// </summary>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
-    public class AntigravExtensionData : Attribute {}
+    public class AntigravExtensionData : Attribute { }
 
     /// <summary>
     /// Write object serialized as an Antigrav string to stream

@@ -155,16 +155,16 @@ public class AntigravDecoderTest {
     public void Decode_List_String() {
         string antigrav = "[\"a\", \"b\", \"c\"]";
         List<string> value = Antigrav.Main.LoadFromString<List<string>>(antigrav)!;
-        CollectionAssert.AreEqual(new List<string> { "a", "b", "c"}, value);
+        CollectionAssert.AreEqual(new List<string> { "a", "b", "c" }, value);
     }
-    
+
     [TestMethod]
     public void Decode_Dictionary_String_String() {
         string antigrav = "{\"a\": \"b\", \"c\": \"d\"}";
         Dictionary<string, string> value = Antigrav.Main.LoadFromString<Dictionary<string, string>>(antigrav)!;
         CollectionAssert.AreEqual(new Dictionary<string, string> { { "a", "b" }, { "c", "d" } }, value);
     }
-    
+
     [TestMethod]
     public void Encode_Dictionary_Int_String() {
         string antigrav = "{\"1\": \"a\", \"2\": \"b\"}";
@@ -189,7 +189,7 @@ public class AntigravDecoderTest {
     public void Decode_Array_Int() {
         string antigrav = "[1, 2, 4, 6, 280]";
         int[] value = LoadFromString<int[]>(antigrav)!;
-        CollectionAssert.AreEqual(new int[] {1, 2, 4, 6, 280}, value);
+        CollectionAssert.AreEqual(new int[] { 1, 2, 4, 6, 280 }, value);
     }
     [TestMethod]
     public void Decode_Array_String() {
@@ -268,7 +268,7 @@ public class AntigravDecoderTest {
     public void Decode_NullableEnumList() {
         string antigrav = "[1, 2, 3, null, 4]";
         List<Values?> value = LoadFromString<List<Values?>>(antigrav)!;
-        CollectionAssert.AreEqual(new List<Values?> { Values.Ace, Values.Two, Values.Three, null, Values.Four}, value);
+        CollectionAssert.AreEqual(new List<Values?> { Values.Ace, Values.Two, Values.Three, null, Values.Four }, value);
     }
     [TestMethod]
     public void Decode_Object() {

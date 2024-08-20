@@ -47,7 +47,7 @@ internal static class Encoder {
         return '"' + s.Select(x => ESCAPE_DICT.TryGetValue(x, out string? value) ? value : char.ToString(x)).ToString() + '"';
     }
     private static string EncodeStringASCII(string s) => '"' + string.Join("",
-        s.EnumerateRunes().Select(rune => 
+        s.EnumerateRunes().Select(rune =>
             rune.Value <= 0x7f ?
             char.ToString((char)rune.Value) :
             ESCAPE_DICT.TryGetValue((char)rune.Value, out string? value) ? value :

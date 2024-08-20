@@ -266,7 +266,7 @@ public class AntigravEncoderTest {
     }
     [TestMethod]
     public void Encode_TuplesList() {
-        List <Tuple<int, int>> value = [new Tuple<int, int>(12, 34), new Tuple<int, int>(34, 45)];
+        List<Tuple<int, int>> value = [new Tuple<int, int>(12, 34), new Tuple<int, int>(34, 45)];
         string antigrav = DumpToString(value);
         Assert.AreEqual("[[12, 34], [34, 45]]", antigrav);
     }
