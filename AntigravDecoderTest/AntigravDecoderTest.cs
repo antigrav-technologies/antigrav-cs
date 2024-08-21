@@ -287,6 +287,7 @@ public class AntigravDecoderTest {
     private class ExtensionDataTestClass {
         [AntigravProperty]
         private Card Card1 = new(Values.Ace, Suits.Spades);
+        public Card GetCard1() => Card1;
         [AntigravProperty("card name or not really idk")]
         public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
         [AntigravExtensionData]
@@ -297,7 +298,7 @@ public class AntigravDecoderTest {
         string antigrav = "{\"card name or not really idk\": {\"value\": 7, \"suit\": 0}, \"Card1\": {\"value\": 1, \"suit\": 3}, \"a\": 2, \"b\": 314}";
         ExtensionDataTestClass value = LoadFromString<ExtensionDataTestClass>(antigrav)!;
         ExtensionDataTestClass expected = new();
-        Assert.IsTrue(expected.Card1.Value == value.Card1.Value && expected.Card1.Suit == value.Card1.Suit);
+        Assert.IsTrue(expected.GetCard1().Value == value.GetCard1().Value && expected.GetCard1().Suit == value.GetCard1().Suit);
         Assert.IsTrue(expected.Card2.Value == value.Card2.Value && expected.Card2.Suit == value.Card2.Suit);
         CollectionAssert.AreEqual(expected.extensionData, value.extensionData);
     }
