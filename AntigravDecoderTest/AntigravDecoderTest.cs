@@ -308,4 +308,71 @@ public class AntigravDecoderTest {
         List<Tuple<int, int>> value = LoadFromString<List<Tuple<int, int>>>(antigrav)!;
         CollectionAssert.AreEqual(new List<Tuple<int, int>>() { new(12, 34), new(34, 45) }, value);
     }
+    private enum CtqaType {
+        Unknown = -1,
+        Fine = 1,
+        Nice = 2,
+        Good = 3,
+        Uncommon = 4,
+        Rare = 5,
+        Wild = 6,
+        Baby = 7,
+        Old = 8,
+        Epic = 9,
+        Brave = 10,
+        Reverse = 11,
+        Inverted = 12,
+        Superior = 13,
+        Tema5002 = 14,
+        Legendary = 15,
+        Mythic = 16,
+        EightBit = 17,
+        Corrupted = 18,
+        Professor = 19,
+        Real = 20,
+        Ultimate = 21,
+        Cool = 22,
+        Silly = 1000,
+        Icosahedron = 10001,
+        Aflyde = 10002,
+        Octopus = 10003,
+        typing = 10004,
+        Kesslon = 10005,
+        Bread = 10006,
+        Blep = 10007,
+        cake64 = 10008,
+        antaegeav = 10009,
+        Jeremy = 10010,
+        Maxwell = 10011,
+        Pentachoron = 10012,
+        NetscapeAd = 10013
+    }
+    private class Inventory {
+        [AntigravProperty("achs")]
+        public List<string> Achievements { get; private set; } = [];
+
+        [AntigravProperty("fastest_catch")]
+        private double fastestCatch = float.PositiveInfinity;
+        public double FastestCatch { get => fastestCatch; set => fastestCatch = Math.Min(fastestCatch, value); }
+
+        [AntigravProperty("slowest_catch")]
+        private double slowestCatch = float.NegativeInfinity;
+        public double SlowestCatch { get => slowestCatch; set => slowestCatch = Math.Max(slowestCatch, value); }
+
+        [AntigravExtensionData]
+        public Dictionary<CtqaType, long> Ctqas { get; set; } = [];
+    }
+    [TestMethod]
+    public void Decode_CtqaBtoInventory() {
+        string antigrav = "{\"achs\": [], 1: 1l, \"fastest_catch\": inf, \"slowest_catch\": -inf}";
+        Inventory value = LoadFromString<Inventory>(antigrav)!;
+        var expected = new Inventory {
+            Ctqas = new() { { CtqaType.Fine, 1 } }
+        };
+        Console.WriteLine(DumpToString(value));
+        CollectionAssert.AreEqual(expected.Ctqas, value.Ctqas);
+        CollectionAssert.AreEqual(expected.Achievements, value.Achievements);
+        Assert.AreEqual(expected.FastestCatch, value.FastestCatch);
+        Assert.AreEqual(expected.SlowestCatch, value.SlowestCatch);
+    }
 }

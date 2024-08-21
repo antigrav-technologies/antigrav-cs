@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -12,7 +13,7 @@ static class Extensions {
 
 namespace Antigrav {
     public partial class Decoder {
-        private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public;
+        private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
         [GeneratedRegex("(.*?)([\"\\\\\\x00-\\x1f])", FLAGS)]
@@ -114,7 +115,7 @@ namespace Antigrav {
                 }
                 catch (MissingMethodException) { throw new MissingMethodException($"Type {type} does not have parameterless constructor and cannot be created"); }
                 bool converted = false;
-                var dictionary = (Dictionary<string, object?>)ChangeType(o, typeof(Dictionary<string, object?>))!;
+                var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
                 foreach (var property in type.GetProperties(BINDING_FLAGS)) {
                     Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
                     if (antigravProperty != null) {
@@ -147,7 +148,7 @@ namespace Antigrav {
                         if (typeof(IDictionary).IsAssignableFrom(propertyInfo.PropertyType)) {
                             IDictionary extensionData = (IDictionary)Activator.CreateInstance(propertyInfo.PropertyType)!;
                             foreach (var kvp in dictionary) {
-                                extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])?.Invoke(extensionData, [kvp.Key, kvp.Value]);
+                                propertyInfo.PropertyType.GetMethod("Add")!.Invoke(extensionData, [kvp.Key, kvp.Value]);
                             }
                             propertyInfo.SetValue(target, extensionData);
                             converted = true;
@@ -157,7 +158,7 @@ namespace Antigrav {
                         if (typeof(IDictionary).IsAssignableFrom(fieldInfo.FieldType)) {
                             IDictionary extensionData = (IDictionary)Activator.CreateInstance(fieldInfo.FieldType)!;
                             foreach (var kvp in dictionary) {
-                                extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])?.Invoke(extensionData, [kvp.Key, kvp.Value]);
+                                extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])!.Invoke(extensionData, [kvp.Key, kvp.Value]);
                             }
                             fieldInfo.SetValue(target, extensionData);
                             converted = true;
@@ -172,14 +173,39 @@ namespace Antigrav {
                 type = Nullable.GetUnderlyingType(type) ?? type;
                 if (type == typeof(object)) return o;
                 Type[] args = type.GetGenericArguments();
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                if (type.IsGenericType) {
+                    if (type.GetGenericTypeDefinition() == typeof(Int128)) return ToInt128(o);
+                    if (type.GetGenericTypeDefinition() == typeof(UInt128)) return ToUInt128(o);
+                    if (type.GetGenericTypeDefinition() == typeof(Complex)) return (Complex)o;
+                    if (type.GetGenericTypeDefinition() == typeof(string)) return (string)o;
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
+                        Type keyType = args[0];
+                        Type valueType = args[1];
+                        var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
+                        var dict = Activator.CreateInstance(dictType);
+                        foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
+                            dictType.GetMethod("Add")!.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
+                        }
+                        return dict;
+                    }
+                    if (type.GetGenericTypeDefinition() == typeof(List<>) || type == typeof(ICollection)) {
+                        Type elementType = args[0];
+                        Type listType = typeof(List<>).MakeGenericType(elementType);
+                        object list = Activator.CreateInstance(listType)!;
+                        foreach (object item in (IEnumerable)o) {
+                            listType.GetMethod("Add")!.Invoke(list, [ChangeType(item, elementType)]);
+                        }
+                        return list;
+                    }
+                }
                 if (type.IsArray) {
                     Type elementType = type.GetElementType()!;
                     Array array = Array.CreateInstance(elementType, ((ICollection)o).Count);
@@ -189,30 +215,7 @@ namespace Antigrav {
                     }
                     return array;
                 }
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
-                    Type keyType = args[0];
-                    Type valueType = args[1];
-                    var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
-                    var dict = Activator.CreateInstance(dictType);
-                    foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
-                        dictType.GetMethod("Add")!.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
-                    }
-                    return dict;
-                }
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>) || type == typeof(ICollection)) {
-                    Type elementType = args[0];
-                    Type listType = typeof(List<>).MakeGenericType(elementType);
-                    object list = Activator.CreateInstance(listType)!;
-                    foreach (object item in (IEnumerable)o) {
-                        listType.GetMethod("Add")!.Invoke(list, [ChangeType(item, elementType)]);
-                    }
-                    return list;
-                }
-                if (type == typeof(Int128)) return ToInt128(o);
-                if (type == typeof(UInt128)) return ToUInt128(o);
-                if (type == typeof(Complex)) return (Complex)o;
                 if (type.IsEnum) return Enum.ToObject(type, o);
-                if (type == typeof(string)) return (string)o;
                 object? o_ = DecodeObject(o, type);
                 if (o_ != null) return o_;
                 return Convert.ChangeType(o, type);

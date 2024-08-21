@@ -108,8 +108,8 @@ internal static class Encoder {
         };
 
         static bool _is_inf(object o) => o switch {
-            float f => float.IsInfinity(f),
-            double d => double.IsInfinity(d),
+            float f => float.IsPositiveInfinity(f),
+            double d => double.IsPositiveInfinity(d),
             _ => false,
         };
 
