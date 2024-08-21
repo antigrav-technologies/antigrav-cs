@@ -19,6 +19,13 @@ public static class Main {
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
     public class AntigravExtensionData : Attribute { }
 
+    public class AntigravDecodeError(string msg, string doc, int pos) : Exception( // you do not need to create instance of it!!!!!!!!!1111111111
+    $"{msg}: " +
+        $"line {doc[..pos].Count(c => c == '\n') + 1} " +
+        $"column {(doc.LastIndexOf('\n', pos) == -1 ? pos + 1 : pos - doc.LastIndexOf('\n', pos))} " +
+        $"(char {pos})"
+    ) { }
+
     /// <summary>
     /// Write object serialized as an Antigrav string to stream
     /// </summary>

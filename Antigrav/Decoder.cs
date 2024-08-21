@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Numerics;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using static Antigrav.Main;
 
 static class Extensions {
     public static int End(this Match match) => match.Index + match.Length;
@@ -226,13 +226,6 @@ namespace Antigrav {
             public int? Value { get; } = value;
         }
 
-        public class ANTIGRAVDecodeError(string msg, string doc, int pos) : Exception(
-            $"{msg}: " +
-                $"line {doc[..pos].Count(c => c == '\n') + 1} " +
-                $"column {(doc.LastIndexOf('\n', pos) == -1 ? pos + 1 : pos - doc.LastIndexOf('\n', pos))} " +
-                $"(char {pos})"
-            ) { }
-
         public static T? Decode<T>(string s) {
             int idx = 0;
             string _decode_string() {
@@ -244,7 +237,7 @@ namespace Antigrav {
                         }
                         catch (FormatException) { }
                     }
-                    throw new ANTIGRAVDecodeError("Invalid \\uXXXX escape", uni, idx);
+                    throw new AntigravDecodeError("Invalid \\uXXXX escape", uni, idx);
                 }
                 string _decode_uXXXXXXXX() {
                     string uni = s.SubstringSafe(idx, 8);
@@ -252,25 +245,25 @@ namespace Antigrav {
                         int codePoint = Convert.ToInt32(uni, 16);
                         if (codePoint <= 0x10FFFF) return char.ConvertFromUtf32(codePoint);
                     }
-                    throw new ANTIGRAVDecodeError("Invalid \\uXXXXXXXX escape", uni, idx);
+                    throw new AntigravDecodeError("Invalid \\uXXXXXXXX escape", uni, idx);
                 }
                 string buf = "";
                 int begin = idx - 1;
                 while (true) {
                     Match chunk = STRINGCHUNK().Match(s, idx);
-                    if (!chunk.Success) throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
+                    if (!chunk.Success) throw new AntigravDecodeError("Unterminated string starting at", s, begin);
                     idx = chunk.End();
                     buf += chunk.Groups[1].Value;
                     string terminator = chunk.Groups[2].Value;
                     if (terminator == "\"") break;
-                    if (terminator != "\\") throw new ANTIGRAVDecodeError($"Invalid control character {Regex.Escape(terminator)} at", s, idx);
-                    char esc = s.CharAt(idx++) ?? throw new ANTIGRAVDecodeError("Unterminated string starting at", s, begin);
+                    if (terminator != "\\") throw new AntigravDecodeError($"Invalid control character {Regex.Escape(terminator)} at", s, idx);
+                    char esc = s.CharAt(idx++) ?? throw new AntigravDecodeError("Unterminated string starting at", s, begin);
                     if (!"Uu".Contains(esc)) {
                         if (BACKSLASH.TryGetValue(esc, out char value)) {
                             buf += value;
                         }
                         else {
-                            throw new ANTIGRAVDecodeError($"Invalid \\escape: {esc}", s, idx);
+                            throw new AntigravDecodeError($"Invalid \\escape: {esc}", s, idx);
                         }
                         idx++;
                     }
@@ -289,7 +282,7 @@ namespace Antigrav {
             void _expect_char(char c) {
                 _expect_whitespace();
                 if (s[idx] != c) {
-                    throw new ANTIGRAVDecodeError($"Expecting '{c}' delimiter", s, idx);
+                    throw new AntigravDecodeError($"Expecting '{c}' delimiter", s, idx);
                 }
                 idx++;
             }
@@ -317,7 +310,7 @@ namespace Antigrav {
                         pairs.Add(key, _decode());
                     }
                     catch (StopIteration err) {
-                        throw new ANTIGRAVDecodeError("Expecting value", s, (int)err.Value!);
+                        throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
                     }
 
                     _expect_whitespace();
@@ -343,12 +336,12 @@ namespace Antigrav {
                         values.Add(_decode());
                     }
                     catch (StopIteration err) {
-                        throw new ANTIGRAVDecodeError("Expecting value", s, (int)err.Value!);
+                        throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
                     }
                     _expect_whitespace();
                     nextchar = s.CharAt(idx++);
                     if (nextchar == ']') return values;
-                    if (nextchar != ',') throw new ANTIGRAVDecodeError("Expecting ',' delimiter", s, idx);
+                    if (nextchar != ',') throw new AntigravDecodeError("Expecting ',' delimiter", s, idx);
                 }
             }
 
@@ -508,9 +501,9 @@ namespace Antigrav {
                 o = _decode();
             }
             catch (StopIteration err) {
-                throw new ANTIGRAVDecodeError("Expecting value", s, (int)err.Value!);
+                throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
             }
-            if (idx != s.Length) throw new ANTIGRAVDecodeError("Extra data", s, idx);
+            if (idx != s.Length) throw new AntigravDecodeError("Extra data", s, idx);
             return (T?)ConvertButNotReally.ChangeType(o, typeof(T?));
         }
     }

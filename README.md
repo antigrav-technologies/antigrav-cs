@@ -1,5 +1,5 @@
 # Antigrav
-[NuGet](https://www.nuget.org/packages/Antigrav/1.1.0) | [Source](https://github.com/tema5002/antigrav-cs) <br>
+[NuGet](https://www.nuget.org/packages/Antigrav) | [Source](https://github.com/tema5002/antigrav-cs) <br>
 Serializing library based on JSON format, so its also easy to read format.
 ## Types
 - null
