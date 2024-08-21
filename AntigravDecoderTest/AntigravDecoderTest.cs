@@ -286,7 +286,7 @@ public class AntigravDecoderTest {
     }
     private class ExtensionDataTestClass {
         [AntigravProperty]
-        public Card Card1 = new(Values.Ace, Suits.Spades);
+        private Card Card1 = new(Values.Ace, Suits.Spades);
         [AntigravProperty("card name or not really idk")]
         public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
         [AntigravExtensionData]

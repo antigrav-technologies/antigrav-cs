@@ -12,6 +12,7 @@ static class Extensions {
 
 namespace Antigrav {
     public partial class Decoder {
+        private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public;
         private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
         [GeneratedRegex("(.*?)([\"\\\\\\x00-\\x1f])", FLAGS)]
@@ -114,7 +115,7 @@ namespace Antigrav {
                 catch (MissingMethodException) { throw new MissingMethodException($"Type {type} does not have parameterless constructor and cannot be created"); }
                 bool converted = false;
                 var dictionary = (Dictionary<string, object?>)ChangeType(o, typeof(Dictionary<string, object?>))!;
-                foreach (var property in type.GetProperties()) {
+                foreach (var property in type.GetProperties(BINDING_FLAGS)) {
                     Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
                     if (antigravProperty != null) {
                         string name = antigravProperty.Name ?? property.Name;
@@ -127,7 +128,7 @@ namespace Antigrav {
                         converted = true;
                     }
                 }
-                foreach (var field in type.GetFields()) {
+                foreach (var field in type.GetFields(BINDING_FLAGS)) {
                     Main.AntigravProperty? antigravField = field.GetCustomAttribute<Main.AntigravProperty>();
                     if (antigravField != null) {
                         string name = antigravField.Name ?? field.Name;
@@ -140,7 +141,7 @@ namespace Antigrav {
                         converted = true;
                     }
                 }
-                MemberInfo? extensionsMember = type.GetMembers().Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<Main.AntigravExtensionData>() != null);
+                MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<Main.AntigravExtensionData>() != null);
                 if (extensionsMember != null) {
                     if (extensionsMember is PropertyInfo propertyInfo) {
                         if (typeof(IDictionary).IsAssignableFrom(propertyInfo.PropertyType)) {
@@ -149,6 +150,7 @@ namespace Antigrav {
                                 extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])?.Invoke(extensionData, [kvp.Key, kvp.Value]);
                             }
                             propertyInfo.SetValue(target, extensionData);
+                            converted = true;
                         }
                     }
                     if (extensionsMember is FieldInfo fieldInfo) {
@@ -158,6 +160,7 @@ namespace Antigrav {
                                 extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])?.Invoke(extensionData, [kvp.Key, kvp.Value]);
                             }
                             fieldInfo.SetValue(target, extensionData);
+                            converted = true;
                         }
                     }
                 }
