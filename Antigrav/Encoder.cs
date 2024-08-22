@@ -3,6 +3,7 @@ using System.Data;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace Antigrav;
 
@@ -78,9 +79,10 @@ internal static class Encoder {
         bool ensureASCII,
         bool allowNaN
     ) {
-        Func<string, string> _encoder = ensureASCII ? EncodeStringASCII : EncodeString;
+        StringBuilder builder = new();
+        Func<string, string> stringEncoder = ensureASCII ? EncodeStringASCII : EncodeString;
 
-        static string _encode_integer(object o, bool prefix = true) => o switch {
+        void EncodeInteger(object o, bool prefix = true) => builder.Append(o switch {
             sbyte b => b.ToString() + (prefix ? "b" : ""),
             byte B => B.ToString() + (prefix ? "B" : ""),
             short s => s.ToString() + (prefix ? "s" : ""),
@@ -92,68 +94,88 @@ internal static class Encoder {
             Int128 ll => ll.ToString() + (prefix ? "ll" : ""),
             UInt128 LL => LL.ToString() + (prefix ? "LL" : ""),
             _ => "at this point i dont know this should never run"
-        };
+        });
 
-        static string _format_float(object o) => o switch {
-            float f => 1e-4f < f && f < 1e7f ? f.ToString("0.0#####") : f.ToString(),
-            double d => 1e-4 < d && d < 1e15 ? d.ToString("0.0#############") : d.ToString(),
-            decimal m => m.ToString("0.0#############################"),
-            _ => "idk bruvver it should never call"
-        };
-
-        static bool _is_nan(object o) => o switch {
-            float f => float.IsNaN(f),
-            double d => double.IsNaN(d),
-            _ => false,
-        };
-
-        static bool _is_inf(object o) => o switch {
-            float f => float.IsPositiveInfinity(f),
-            double d => double.IsPositiveInfinity(d),
-            _ => false,
-        };
-
-        static bool _is_ninf(object o) => o switch {
-            float f => float.IsNegativeInfinity(f),
-            double d => double.IsNegativeInfinity(d),
-            _ => false,
-        };
-
-        string _encode_float(object o) {
+        void EncodeFloat(object o) {
             string prefix = "";
             if (o is float) prefix = "F";
             if (o is decimal) prefix = "M";
 
             string? text = null;
-            if (_is_nan(o)) text = "NaN";
-            else if (_is_inf(o)) text = "inf";
-            else if (_is_ninf(o)) text = "-inf";
+            if ((o is float f1 && float.IsNaN(f1)) || (o is double d1 && double.IsNaN(d1))) text = "NaN";
+            else if ((o is float f2 && float.IsPositiveInfinity(f2)) || (o is double d2 && double.IsPositiveInfinity(d2))) text = "inf";
+            else if ((o is float f3 && float.IsNegativeInfinity(f3)) || (o is double d3 && double.IsNegativeInfinity(d3))) text = "-inf";
 
             if (!allowNaN && text != null) {
-                throw new ArgumentException($"Out of range float values are not JSON compliant: {o}");
+                throw new ArgumentException($"Out of range float values are not Antigrav compliant: {o}");
             }
 
-            text ??= _format_float(o);
+            text ??= o switch {
+                float f => 1e-4f < MathF.Abs(f) && MathF.Abs(f) < 1e7f ? f.ToString("0.0#####") : f.ToString(),
+                double d => 1e-4 < Math.Abs(d) && Math.Abs(d) < 1e15 ? d.ToString("0.0#############") : d.ToString(),
+                decimal m => m.ToString("0.0#############################"),
+                _ => "idk bruvver it should never call"
+            };
 
-            return text + prefix;
+            builder.Append(text + prefix);
         }
 
-        string _encode(object? o, uint _current_indent_level) => o switch {
-            string s => _encoder(s),
-            null => "null",
-            true => "true",
-            false => "false",
-            sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128 => _encode_integer(o),
-            Enum @enum => _encode_integer(Convert.ChangeType(@enum, Enum.GetUnderlyingType(@enum.GetType()))),
-            float or double or decimal => _encode_float(o),
-            ITuple t => _encode_list(t.GetType().GetProperties().Select(p => p.GetValue(t)).ToList(), _current_indent_level),
-            Complex c => $"{_format_float(c.Real)}+{_format_float(c.Imaginary)}i",
-            IDictionary d => _encode_dict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level),
-            ICollection c => _encode_list(c.Cast<object?>().ToList(), _current_indent_level),
-            _ => _encode_dict(_object_to_dict(o), _current_indent_level)
-        };
+        void EncodeComplex(Complex c) {
+            EncodeFloat(c.Real);
+            builder.Append(c.Imaginary < 0 ? '-' : '+');
+            EncodeFloat(Math.Abs(c.Imaginary));
+            builder.Append('i');
+        }
 
-        static Dictionary<object, object?> _object_to_dict(object o) {
+        void Encode(object? o, uint _current_indent_level) {
+            if (o is null) {
+                builder.Append("null");
+                return;
+            }
+            if (o is string s) {
+                builder.Append(stringEncoder(s));
+                return;
+            }
+            if (o is true) {
+                builder.Append("true");
+                return;
+            }
+            if (o is false) {
+                builder.Append("false");
+                return;
+            }
+            if (o is sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128) {
+                EncodeInteger(o);
+                return;
+            }
+            if (o is Enum @enum) {
+                EncodeInteger(Convert.ChangeType(@enum, Enum.GetUnderlyingType(@enum.GetType())));
+                return;
+            }
+            if (o is float or double or decimal) {
+                EncodeFloat(o);
+                return;
+            }
+            if (o is Complex c) {
+                EncodeComplex(c);
+                return;
+            }
+            if (o is IDictionary d) {
+                EncodeDict(d.Keys.Cast<object>().Zip(d.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v)).ToDictionary(x => x.Key, x => x.Value), _current_indent_level);
+                return;
+            }
+            if (o is ITuple t) {
+                EncodeList(t.GetType().GetProperties().Select(p => p.GetValue(t)).ToList(), _current_indent_level);
+                return;
+            }
+            if (o is ICollection l) {
+                EncodeList(l.Cast<object?>().ToList(), _current_indent_level);
+                return;
+            }
+            EncodeDict(ObjectToDict(o), _current_indent_level);
+        }
+
+        static Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
             foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
                 Main.AntigravProperty? antigravProperty = member.GetCustomAttribute<Main.AntigravProperty>();
@@ -173,61 +195,67 @@ internal static class Encoder {
             return dictionary;
         }
 
-        string _encode_list(List<object?> list, uint _current_indent_level) {
-            if (list.Count == 0) return "[]";
-            string buf = "[";
+        void EncodeList(List<object?> list, uint _current_indent_level) {
+            builder.Append('[');
+            if (list.Count == 0) {
+                builder.Append(']');
+                return;
+            }
             string separator = ", ";
             string? _newline_indent = null;
             if (indent != null) {
                 _current_indent_level++;
                 _newline_indent = '\n' + new string(' ', (int)(indent * _current_indent_level));
                 separator = "," + _newline_indent;
-                buf += _newline_indent;
+                builder.Append(_newline_indent);
             }
             bool first = true;
             foreach (object? value in list) {
                 if (first) first = false;
-                else buf += separator;
-                buf += _encode(value, _current_indent_level);
+                else builder.Append(separator);
+                Encode(value, _current_indent_level);
             }
             if (indent != null) {
                 _current_indent_level--;
-                buf += '\n' + new string(' ', (int)(indent * _current_indent_level));
+                builder.Append('\n' + new string(' ', (int)(indent * _current_indent_level)));
             }
-            buf += ']';
-            return buf;
+            builder.Append(']');
         }
 
-        string _encode_dict(Dictionary<object, object?> dict, uint _current_indent_level) {
-            if (dict.Count == 0) return "{}";
-            string buf = "{";
+        void EncodeDict(Dictionary<object, object?> dict, uint _current_indent_level) {
+            builder.Append('{');
+            if (dict.Count == 0) {
+                builder.Append('}');
+                return;
+            }
             string separator = ", ";
             string? _newline_indent = null;
             if (indent != null) {
                 _current_indent_level++;
                 _newline_indent = '\n' + new string(' ', (int)(indent * _current_indent_level));
                 separator = "," + _newline_indent;
-                buf += _newline_indent;
+                builder.Append(_newline_indent);
             }
 
             if (sortKeys) dict = dict.OrderBy(x => x.Key, new NoneOfYourGoddamnBusinees()).ToDictionary(x => x.Key, x => x.Value);
             bool first = true;
             foreach (var keyValue in dict) {
                 if (first) first = false;
-                else buf += separator;
+                else builder.Append(separator);
 
-                buf += _encode(keyValue.Key, _current_indent_level);
-                buf += ": ";
-                buf += _encode(keyValue.Value, _current_indent_level);
+                Encode(keyValue.Key, _current_indent_level);
+                builder.Append(": ");
+                Encode(keyValue.Value, _current_indent_level);
             }
             if (indent != null) {
                 _current_indent_level--;
-                buf += '\n' + new string(' ', (int)(indent * _current_indent_level));
+                builder.Append('\n' + new string(' ', (int)(indent * _current_indent_level)));
             }
-            buf += '}';
-            return buf;
+            builder.Append('}');
         }
 
-        return _encode(o, 0);
+        Encode(o, 0);
+
+        return builder.ToString();
     }
 }
