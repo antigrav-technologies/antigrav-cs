@@ -63,4 +63,4 @@ Console.WriteLine(antigrav); // "{\"value\": 1, \"suit\": 3}"
 Card decodedValue = LoadFromString<Card>(antigrav);
 Console.WriteLine(decodedValue); // "Ace of Spades"
 ```
-This was made as an experiment at first place, any tweaks in code are welcome
+This was made as an experiment at first place, any tweaks in code are welcome. Dont ask why format is called so, the origin was extremely stupid

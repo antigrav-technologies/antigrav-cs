@@ -2,13 +2,13 @@
 <package >
   <metadata>
     <id>Antigrav</id>
-    <version>1.3</version>
+    <version>1.4</version>
     <Authors>Tema5002 &lt;xtema5002x@gmail.com&gt;</Authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
     <!-- <icon>icon.png</icon> -->
     <Description>Serializing library based on JSON format.</Description>
-    <releaseNotes>Optimised encoder</releaseNotes>
+    <releaseNotes>Fix collections deserializing</releaseNotes>
     <copyright>MIT</copyright>
     <tags>Serializing Antigrav</tags>
   </metadata>

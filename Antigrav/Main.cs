@@ -2,7 +2,7 @@
 
 public static class Main {
     /// <summary>
-    /// Provides metadata to make property serializable
+    /// Provides metadata to make property or field serializable
     /// </summary>
     /// <param name="name">The name of the property in the serialized output. If not specified then original name is used</param>
     /// <param name="defaultValue">Default value for the property if it's missing</param>
@@ -76,7 +76,7 @@ public static class Main {
     ///     Antigrav.Main.Dump(value, writer.BaseStream, indent: 4);
     /// }
     /// /*
-    /// should write this to file:
+    /// should write this to stream:
     /// {
     ///     "1": 2
     ///     "3": 4

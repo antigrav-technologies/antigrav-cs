@@ -117,10 +117,10 @@ namespace Antigrav {
                 bool converted = false;
                 var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
                 foreach (var property in type.GetProperties(BINDING_FLAGS)) {
-                    Main.AntigravProperty? antigravProperty = property.GetCustomAttribute<Main.AntigravProperty>();
+                    AntigravProperty? antigravProperty = property.GetCustomAttribute<AntigravProperty>();
                     if (antigravProperty != null) {
                         string name = antigravProperty.Name ?? property.Name;
-                        var value = antigravProperty.DefaultValue;
+                        var value = antigravProperty.DefaultValue ?? Activator.CreateInstance(property.PropertyType);
                         if (dictionary.TryGetValue(name, out var v)) {
                             value = v;
                             dictionary.Remove(name);
@@ -130,10 +130,10 @@ namespace Antigrav {
                     }
                 }
                 foreach (var field in type.GetFields(BINDING_FLAGS)) {
-                    Main.AntigravProperty? antigravField = field.GetCustomAttribute<Main.AntigravProperty>();
+                    AntigravProperty? antigravField = field.GetCustomAttribute<AntigravProperty>();
                     if (antigravField != null) {
                         string name = antigravField.Name ?? field.Name;
-                        var value = antigravField.DefaultValue;
+                        var value = antigravField.DefaultValue ?? Activator.CreateInstance(field.FieldType);
                         if (dictionary.TryGetValue(name, out var v)) {
                             value = v;
                             dictionary.Remove(name);
@@ -142,7 +142,7 @@ namespace Antigrav {
                         converted = true;
                     }
                 }
-                MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<Main.AntigravExtensionData>() != null);
+                MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<AntigravExtensionData>() != null);
                 if (extensionsMember != null) {
                     if (extensionsMember is PropertyInfo propertyInfo) {
                         if (typeof(IDictionary).IsAssignableFrom(propertyInfo.PropertyType)) {

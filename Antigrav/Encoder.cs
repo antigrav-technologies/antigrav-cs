@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using static Antigrav.Main;
 
 namespace Antigrav;
 
@@ -178,8 +179,8 @@ internal static class Encoder {
         static Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
             foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
-                Main.AntigravProperty? antigravProperty = member.GetCustomAttribute<Main.AntigravProperty>();
-                Main.AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<Main.AntigravExtensionData>();
+                AntigravProperty? antigravProperty = member.GetCustomAttribute<AntigravProperty>();
+                AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 if (member is PropertyInfo property) {
                     if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? property.Name, property.GetValue(o));
                     if (antigravExtensionData != null) {
