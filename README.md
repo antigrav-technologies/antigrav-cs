@@ -1,5 +1,5 @@
 # Antigrav
-[NuGet](https://www.nuget.org/packages/Antigrav) | [Source](https://github.com/tema5002/antigrav-cs) <br>
+[NuGet](https://www.nuget.org/packages/Antigrav) | [Source](https://github.com/tema5002/antigrav-cs)\
 Serializing library based on JSON format, so its also easy to read format.
 ## Types
 - null
@@ -10,7 +10,7 @@ Serializing library based on JSON format, so its also easy to read format.
 - floating point number: float or double or decimal
 - Complex
 - IDictionary: specified in curly brackets (`{}`). Objects are encoded as dictionaries
-- ICollection or ITuple: specified in square brackets (`[]`)
+- Arrays, ITuple, IList: specified in square brackets (`[]`)
 ## Usage example
 
 ```c#
