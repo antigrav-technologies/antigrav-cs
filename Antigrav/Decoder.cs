@@ -1,14 +1,30 @@
 ﻿using System.Collections;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using static Antigrav.Main;
 
 static class Extensions {
     public static int End(this Match match) => match.Index + match.Length;
-    public static bool IsWhitespace(this char? c) => " \t\n\r".Contains(c ?? 'ъ');
     public static string SubstringSafe(this string s, int startIndex, int length) => startIndex + length <= s.Length ? s.Substring(startIndex, length) : s[startIndex..];
-    public static char? CharAt(this string s, int index) => index <= s.Length ? s[index] : null;
+    public static char? CharAt(this string s, int index) => index < s.Length ? s[index] : null;
+    public static Type Type(this MemberInfo memberInfo) => memberInfo switch {
+        PropertyInfo propertyInfo => propertyInfo.PropertyType,
+        FieldInfo fieldInfo => fieldInfo.FieldType,
+        _ => typeof(object)
+    };
+
+    public static void SetValue(this MemberInfo memberInfo, object? obj, object? value) {
+        switch (memberInfo) {
+            case PropertyInfo propertyInfo:
+                propertyInfo.SetValue(obj, value);
+                break;
+            case FieldInfo fieldInfo:
+                fieldInfo.SetValue(obj, value);
+                break;
+        }
+    }
 }
 
 namespace Antigrav {
@@ -21,36 +37,8 @@ namespace Antigrav {
 
         [GeneratedRegex("[ \\t\\n\\r]*", FLAGS)]
         private static partial Regex WHITESPACE();
-
-        [GeneratedRegex("(-?\\d+)b", FLAGS)]
-        private static partial Regex SBYTE();
-
-        [GeneratedRegex("(-?\\d+)B", FLAGS)]
-        private static partial Regex BYTE();
-
-        [GeneratedRegex("(-?\\d+)s", FLAGS)]
-        private static partial Regex SHORT();
-
-        [GeneratedRegex("(-?\\d+)S", FLAGS)]
-        private static partial Regex USHORT();
-
-        [GeneratedRegex("(-?\\d+)", FLAGS)]
+        [GeneratedRegex("-?\\d+", FLAGS)]
         private static partial Regex INT();
-
-        [GeneratedRegex("(-?\\d+)I", FLAGS)]
-        private static partial Regex UINT();
-
-        [GeneratedRegex("(-?\\d+)l", FLAGS)]
-        private static partial Regex LONG();
-
-        [GeneratedRegex("(-?\\d+)L", FLAGS)]
-        private static partial Regex ULONG();
-
-        [GeneratedRegex("(-?\\d+)ll", FLAGS)]
-        private static partial Regex LONGLONG();
-
-        [GeneratedRegex("(-?\\d+)LL", FLAGS)]
-        private static partial Regex ULONGLONG();
 
         [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)[Ff]", FLAGS)]
         private static partial Regex FLOAT();
@@ -66,167 +54,119 @@ namespace Antigrav {
         private static partial Regex COMPLEX();
 
         private static readonly Dictionary<char, char> BACKSLASH = new() {
-        {'"', '"'},
-        {'\\', '\\'},
-        {'/', '/'},
-        {'b', '\b'},
-        {'f', '\f'},
-        {'n', '\n'},
-        {'r', '\r'},
-        {'t', '\t'}
-    };
+            {'"', '"'},
+            {'\\', '\\'},
+            {'/', '/'},
+            {'b', '\b'},
+            {'f', '\f'},
+            {'n', '\n'},
+            {'r', '\r'},
+            {'t', '\t'}
+        };
 
         private class ConvertButNotReally {
-            public static Int128 ToInt128(object value) {
-                if (value is string str) return Int128.Parse(str);
-                if (value is Int128 int128Value) return int128Value;
-                if (value is UInt128 uint128Value) return (Int128)uint128Value;
-                if (value is sbyte sbyteValue) return (Int128)sbyteValue;
-                if (value is byte byteValue) return (Int128)byteValue;
-                if (value is short shortValue) return (Int128)shortValue;
-                if (value is ushort ushortValue) return (Int128)ushortValue;
-                if (value is int intValue) return (Int128)intValue;
-                if (value is uint uintValue) return (Int128)uintValue;
-                if (value is long longValue) return (Int128)longValue;
-                if (value is ulong ulongValue) return (Int128)ulongValue;
-                throw new ArgumentException("Cannot convert to Int128");
+            public static Array DecodeArray(object o, Type type) {
+                Type elementType = type.GetElementType()!;
+                Array array = Array.CreateInstance(elementType, ((ICollection)o).Count);
+                int i = 0;
+                foreach (object item in (IEnumerable)o) {
+                    array.SetValue(ChangeType(item, elementType), i++);
+                }
+                return array;
             }
 
-            public static UInt128 ToUInt128(object value) {
-                if (value is string str) return UInt128.Parse(str);
-                if (value is Int128 int128Value) return (UInt128)int128Value;
-                if (value is UInt128 uint128Value) return uint128Value;
-                if (value is sbyte sbyteValue) return (UInt128)sbyteValue;
-                if (value is byte byteValue) return (UInt128)byteValue;
-                if (value is short shortValue) return (UInt128)shortValue;
-                if (value is ushort ushortValue) return (UInt128)ushortValue;
-                if (value is int intValue) return (UInt128)intValue;
-                if (value is uint uintValue) return (UInt128)uintValue;
-                if (value is long longValue) return (UInt128)longValue;
-                if (value is ulong ulongValue) return (UInt128)ulongValue;
-                throw new ArgumentException("Cannot convert to UInt128");
+            public static object DecodeDictionary(object o, Type type) {
+                Type keyType = type.GetGenericArguments()[0];
+                Type valueType = type.GetGenericArguments()[1];
+                var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
+                object dict = Activator.CreateInstance(dictType)!;
+                var method = dictType.GetMethod("Add")!;
+                foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
+                    method.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
+                }
+                return dict;
             }
 
-            public static object? DecodeObject(object o, Type type) {
-                if (o is not Dictionary<object, object>) return null;
-                object? target;
+            public static object DecodeList(object o, Type type) {
+                Type elementType = type.GetGenericArguments()[0];
+                Type listType = typeof(List<>).MakeGenericType(elementType);
+                object list = Activator.CreateInstance(listType)!;
+                var method = listType.GetMethod("Add")!;
+                foreach (object item in (IEnumerable)o) {
+                    method.Invoke(list, [ChangeType(item, elementType)]);
+                }
+                return list;
+            }
+
+            public static object TryCreateObject(Type targetType) {
                 try {
-                    target = Activator.CreateInstance(type);
+                    return Activator.CreateInstance(targetType)!;
                 }
-                catch (MissingMethodException) { throw new MissingMethodException($"Type {type} does not have parameterless constructor and cannot be created"); }
-                bool converted = false;
+                catch (MissingMethodException) {
+#pragma warning disable SYSLIB0050
+                    return FormatterServices.GetSafeUninitializedObject(targetType);
+                }
+            }
+
+            public static object DecodeObject(object o, Type type) {
+                if (o is not Dictionary<object, object>) throw new AntigravCastingError(o.GetType(), type);
+                object target = TryCreateObject(type);
                 var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
-                foreach (var property in type.GetProperties(BINDING_FLAGS)) {
-                    AntigravSerializable? antigravProperty = property.GetCustomAttribute<AntigravSerializable>();
-                    if (antigravProperty != null) {
-                        string name = antigravProperty.Name ?? property.Name;
-                        object? value;
-                        if (!dictionary.ContainsKey(name)) {
-                            value = antigravProperty.DefaultValue;
-                            if (antigravProperty.LoadAsNull) value ??= Activator.CreateInstance(property.PropertyType);
-                        }
-                        else {
-                            value = dictionary[name];
-                            dictionary.Remove(name);
-                        }
-                        property.SetValue(target, ChangeType(value, property.PropertyType));
-                        converted = true;
-                    }
-                }
-                foreach (var field in type.GetFields(BINDING_FLAGS)) {
-                    AntigravSerializable? antigravField = field.GetCustomAttribute<AntigravSerializable>();
-                    if (antigravField != null) {
-                        string name = antigravField.Name ?? field.Name;
-                        object? value;
-                        if (!dictionary.ContainsKey(name)) {
-                            value = antigravField.DefaultValue;
-                            if (antigravField.LoadAsNull) value ??= Activator.CreateInstance(field.FieldType);
-                        }
-                        else {
-                            value = dictionary[name];
-                            dictionary.Remove(name);
-                        }
-                        field.SetValue(target, ChangeType(value, field.FieldType));
-                        converted = true;
-                    }
+                foreach (var member in type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
+                    AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
+                    if (antigravSerializable == null) continue;
+                    string name = antigravSerializable.Name ?? member.Name;
+                    member.SetValue(target, ChangeType(dictionary.TryGetValue(name, out var v) ? v : (antigravSerializable.LoadAsNull ? antigravSerializable.DefaultValue : antigravSerializable.DefaultValue ?? TryCreateObject(member.Type())), member.Type()));
+                    dictionary.Remove(name);
                 }
                 MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<AntigravExtensionData>() != null);
                 if (extensionsMember != null) {
-                    if (extensionsMember is PropertyInfo propertyInfo) {
-                        if (typeof(IDictionary).IsAssignableFrom(propertyInfo.PropertyType)) {
-                            IDictionary extensionData = (IDictionary)Activator.CreateInstance(propertyInfo.PropertyType)!;
-                            foreach (var kvp in dictionary) {
-                                propertyInfo.PropertyType.GetMethod("Add")!.Invoke(extensionData, [kvp.Key, kvp.Value]);
-                            }
-                            propertyInfo.SetValue(target, extensionData);
-                            converted = true;
-                        }
+                    IDictionary extensionData = (IDictionary)TryCreateObject(extensionsMember.Type());
+                    MethodInfo method = extensionsMember.Type().GetMethod("Add")!;
+                    foreach (var kvp in dictionary) {
+                        method.Invoke(extensionData, [kvp.Key, kvp.Value]);
                     }
-                    if (extensionsMember is FieldInfo fieldInfo) {
-                        if (typeof(IDictionary).IsAssignableFrom(fieldInfo.FieldType)) {
-                            IDictionary extensionData = (IDictionary)Activator.CreateInstance(fieldInfo.FieldType)!;
-                            foreach (var kvp in dictionary) {
-                                extensionData.GetType().GetMethod("Add", [kvp.Key.GetType(), (kvp.Value ?? typeof(object)).GetType()])!.Invoke(extensionData, [kvp.Key, kvp.Value]);
-                            }
-                            fieldInfo.SetValue(target, extensionData);
-                            converted = true;
-                        }
-                    }
+                    extensionsMember.SetValue(target, extensionData);
                 }
-                return converted ? target : null;
+                return target;
             }
 
             public static object? ChangeType(object? o, Type type) {
                 if (o == null) return null;
                 type = Nullable.GetUnderlyingType(type) ?? type;
                 if (type == typeof(object)) return o;
-                Type[] args = type.GetGenericArguments();
-                if (type.IsGenericType) {
-                    if (type.GetGenericTypeDefinition() == typeof(Int128)) return ToInt128(o);
-                    if (type.GetGenericTypeDefinition() == typeof(UInt128)) return ToUInt128(o);
-                    if (type.GetGenericTypeDefinition() == typeof(Complex)) return (Complex)o;
-                    if (type.GetGenericTypeDefinition() == typeof(string)) return (string)o;
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Tuple<,,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                    if (type.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
-                        Type keyType = args[0];
-                        Type valueType = args[1];
-                        var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
-                        var dict = Activator.CreateInstance(dictType);
-                        foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
-                            dictType.GetMethod("Add")!.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
-                        }
-                        return dict;
-                    }
-                    if (type.GetGenericTypeDefinition() == typeof(List<>) || type == typeof(ICollection)) {
-                        Type elementType = args[0];
-                        Type listType = typeof(List<>).MakeGenericType(elementType);
-                        object list = Activator.CreateInstance(listType)!;
-                        foreach (object item in (IEnumerable)o) {
-                            listType.GetMethod("Add")!.Invoke(list, [ChangeType(item, elementType)]);
-                        }
-                        return list;
-                    }
-                }
-                if (type.IsArray) {
-                    Type elementType = type.GetElementType()!;
-                    Array array = Array.CreateInstance(elementType, ((ICollection)o).Count);
-                    int i = 0;
-                    foreach (object item in (IEnumerable)o) {
-                        array.SetValue(ChangeType(item, elementType), i++);
-                    }
-                    return array;
-                }
+                if (type == typeof(string)) return (string)o;
+                if (type == typeof(sbyte)) return (sbyte)o;
+                if (type == typeof(byte)) return (byte)o;
+                if (type == typeof(short)) return (short)o;
+                if (type == typeof(ushort)) return (ushort)o;
+                if (type == typeof(int)) return (int)o;
+                if (type == typeof(uint)) return (uint)o;
+                if (type == typeof(long)) return (long)o;
+                if (type == typeof(ulong)) return (ulong)o;
+                if (type == typeof(Int128)) return (Int128)o;
+                if (type == typeof(UInt128)) return (UInt128)o;
+                if (type == typeof(float)) return (float)o;
+                if (type == typeof(double)) return (double)o;
+                if (type == typeof(decimal)) return (decimal)o;
+                if (type == typeof(Complex)) return (Complex)o;
+                if (o is bool @bool && type == typeof(bool)) return @bool;
                 if (type.IsEnum) return Enum.ToObject(type, o);
-                object? o_ = DecodeObject(o, type);
-                if (o_ != null) return o_;
-                return Convert.ChangeType(o, type);
+                if (type.IsArray) return DecodeArray(o, type);
+                if (type.IsGenericType) {
+                    var type_ = type.GetGenericTypeDefinition();
+                    if (type_ == typeof(Tuple<>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Tuple<,,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    if (type_ == typeof(Dictionary<,>)) return DecodeDictionary(o, type);
+                    if (type_ == typeof(List<>)) return DecodeList(o, type);
+                }
+                return DecodeObject(o, type);
             }
         }
 
@@ -448,58 +388,42 @@ namespace Antigrav {
                         return value;
                     }
                 }
-                // i will probably have to change the order of them
-                // УКРАЛИ СУКА ВСЁ ОТМЕНА
-                // update i finally changed the order
-                match = LONGLONG().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return Int128.Parse(match.Groups[1].Value);
-                }
-                match = ULONGLONG().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return UInt128.Parse(match.Groups[1].Value);
-                }
-                match = LONG().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return long.Parse(match.Groups[1].Value);
-                }
-                match = ULONG().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return ulong.Parse(match.Groups[1].Value);
-                }
-                match = SBYTE().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return sbyte.Parse(match.Groups[1].Value);
-                }
-                match = BYTE().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return byte.Parse(match.Groups[1].Value);
-                }
-                match = SHORT().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return short.Parse(match.Groups[1].Value);
-                }
-                match = USHORT().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return ushort.Parse(match.Groups[1].Value);
-                }
-                match = UINT().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return uint.Parse(match.Groups[1].Value);
-                }
                 match = INT().Match(s, idx);
                 if (match.Success && match.Index == idx) {
                     idx = match.End();
-                    return int.Parse(match.Groups[1].Value);
+                    switch (s.SubstringSafe(idx, 2)) {
+                        case "ll":
+                            idx += 2;
+                            return Int128.Parse(match.Value);
+                        case "LL":
+                            idx += 2;
+                            return UInt128.Parse(match.Value);
+                        default:
+                            switch (s.CharAt(idx)) {
+                                case 'l':
+                                    idx++;
+                                    return long.Parse(match.Value);
+                                case 'L':
+                                    idx++;
+                                    return ulong.Parse(match.Value);
+                                case 'I':
+                                    idx++;
+                                    return uint.Parse(match.Value);
+                                case 's':
+                                    idx++;
+                                    return short.Parse(match.Value);
+                                case 'S':
+                                    idx++;
+                                    return ushort.Parse(match.Value);
+                                case 'b':
+                                    idx++;
+                                    return sbyte.Parse(match.Value);
+                                case 'B':
+                                    idx++;
+                                    return byte.Parse(match.Value);
+                            }
+                            return int.Parse(match.Value);
+                    }
                 }
                 throw new StopIteration(idx);
             }

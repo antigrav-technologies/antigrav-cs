@@ -166,8 +166,8 @@ public class AntigravDecoderTest {
     }
 
     [TestMethod]
-    public void Encode_Dictionary_Int_String() {
-        string antigrav = "{\"1\": \"a\", \"2\": \"b\"}";
+    public void Decode_Dictionary_Int_String() {
+        string antigrav = "{1: \"a\", 2: \"b\"}";
         Dictionary<int, string> value = Antigrav.Main.LoadFromString<Dictionary<int, string>>(antigrav)!;
         CollectionAssert.AreEqual(new Dictionary<int, string> { { 1, "a" }, { 2, "b" } }, value);
     }

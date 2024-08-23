@@ -59,6 +59,8 @@ public static class Main {
         $"(char {pos})"
     ) { }
 
+    public class AntigravCastingError(Type fromType, Type targetType) : Exception($"Cant cast {fromType} to {targetType}") {}
+
     /// <summary>
     /// Write object serialized as an Antigrav string to stream
     /// </summary>
@@ -171,8 +173,7 @@ public static class Main {
     /// <param name="stream">Stream to read</param>
     /// <returns>Deserialized object</returns>
     /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
-    /// <exception cref="MissingMethodException"></exception>
+    /// <exception cref="AntigravDecodeError"></exception>
     public static T? Load<T>(
         Stream stream,
         int offset,
@@ -191,8 +192,7 @@ public static class Main {
     /// <param name="s">String to deserialize</param>
     /// <returns>Deserialized object</returns>
     /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
-    /// <exception cref="MissingMethodException"></exception>
+    /// <exception cref="AntigravDecodeError"></exception>
     public static T? LoadFromString<T>(string s) => Decoder.Decode<T>(s);
 
     /// <summary>
@@ -202,7 +202,6 @@ public static class Main {
     /// <param name="filePath">File to read</param>
     /// <returns>Deserialized object</returns>
     /// <exception cref="ArgumentException"></exception>
-    /// <exception cref="Decoder.ANTIGRAVDecodeError"></exception>
-    /// <exception cref="MissingMethodException"></exception>
+    /// <exception cref="AntigravDecodeError"></exception>
     public static T? LoadFromFile<T>(string filePath) => Decoder.Decode<T>(File.ReadAllText(filePath));
 }
