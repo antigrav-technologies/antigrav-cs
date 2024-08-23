@@ -117,7 +117,7 @@ namespace Antigrav {
                 bool converted = false;
                 var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
                 foreach (var property in type.GetProperties(BINDING_FLAGS)) {
-                    AntigravProperty? antigravProperty = property.GetCustomAttribute<AntigravProperty>();
+                    AntigravSerializable? antigravProperty = property.GetCustomAttribute<AntigravSerializable>();
                     if (antigravProperty != null) {
                         string name = antigravProperty.Name ?? property.Name;
                         var value = antigravProperty.DefaultValue ?? Activator.CreateInstance(property.PropertyType);
@@ -130,7 +130,7 @@ namespace Antigrav {
                     }
                 }
                 foreach (var field in type.GetFields(BINDING_FLAGS)) {
-                    AntigravProperty? antigravField = field.GetCustomAttribute<AntigravProperty>();
+                    AntigravSerializable? antigravField = field.GetCustomAttribute<AntigravSerializable>();
                     if (antigravField != null) {
                         string name = antigravField.Name ?? field.Name;
                         var value = antigravField.DefaultValue ?? Activator.CreateInstance(field.FieldType);

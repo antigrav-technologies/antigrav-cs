@@ -46,9 +46,9 @@ private class Card {
         Value = value;
         Suit = suit;
     }
-    [AntigravProperty("value")]
+    [AntigravSerializable("value")]
     public Values? Value { get; private set; }
-    [AntigravProperty("suit")]
+    [AntigravSerializable("suit")]
     public Suits? Suit { get; private set; }
     public override string ToString() => $"{Value} of {Suit}";
 }

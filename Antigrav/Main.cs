@@ -1,18 +1,52 @@
-﻿namespace Antigrav;
+﻿using System.Reflection;
+
+namespace Antigrav;
 
 public static class Main {
     /// <summary>
     /// Provides metadata to make property or field serializable
     /// </summary>
-    /// <param name="name">The name of the property in the serialized output. If not specified then original name is used</param>
-    /// <param name="defaultValue">Default value for the property if it's missing</param>
+    /// <param name="name">The name of the property or field in the serialized output. If not specified then original name is used</param>
+    /// <param name="defaultValue">Default value for the property or field if it's missing</param>
+    /// <param name="serializeIf">Serializes if true, skips property otherwise</param>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class AntigravProperty(string? name = null, object? defaultValue = null) : Attribute {
+    public class AntigravSerializable(string? name = null, object? defaultValue = null) : Attribute {
         public string? Name { get; } = name;
         public object? DefaultValue { get; } = defaultValue;
     }
+
     /// <summary>
-    /// When placed on a property of type System.Collections.Generic.IDictionary`2, any
+    /// Used to make specific properties or fields not serializable under some condition with this interface
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// using System.Reflection;
+    /// using static Antigrav.Main;
+    /// 
+    /// public class SerializeWithConditionExample : IConditionalAntigravSerializable {
+    ///     [AntigravSerializable("ints")]
+    ///     public List<int> Ints { get; set; } = [];
+    /// 
+    ///     [AntigravSerializable("polyhedra")]
+    ///     public string text = "kreisi burglar making pickles";
+    ///     public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
+    ///         if (memberInfo is FieldInfo fieldInfo) {
+    ///             if (fieldInfo.Name == "text") // or serializable.Name == "kreisi burglar making pickles"
+    ///                 return Ints.Contains(3);
+    ///         }
+    ///         return true;
+    ///     }
+    /// }
+    /// 
+    /// DumpToString(new SerializeWithConditionExample() { Ints = [1] }); // "{\"ints\": [1]}"
+    /// DumpToString(new SerializeWithConditionExample() { Ints = [1, 2, 3] }); // "{\"ints\": [1, 2, 3], \"\\u044a\": \"kreisi burglar making pickles\"}"
+    /// </code>
+    /// </example>
+    public interface IConditionalAntigravSerializable {
+        public abstract bool SerializeIt(AntigravSerializable serializable, System.Reflection.MemberInfo memberInfo);
+    }
+    /// <summary>
+    /// When placed on a property or field of type System.Collections.Generic.IDictionary`2, any
     /// properties that do not have a matching member are added to that dictionary during
     /// deserialization and written during serialization.
     /// </summary>

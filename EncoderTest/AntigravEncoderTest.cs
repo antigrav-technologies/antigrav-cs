@@ -1,4 +1,6 @@
 ﻿using System.Numerics;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using static Antigrav.Main;
 
 namespace EncoderTest;
@@ -238,9 +240,9 @@ public class AntigravEncoderTest {
             Value = value;
             Suit = suit;
         }
-        [AntigravProperty("value")]
+        [AntigravSerializable("value")]
         public Values? Value { get; private set; }
-        [AntigravProperty("suit")]
+        [AntigravSerializable("suit")]
         public Suits? Suit { get; private set; }
         public override string ToString() => $"{Value} of {Suit}";
     }
@@ -251,9 +253,9 @@ public class AntigravEncoderTest {
         Assert.AreEqual("{\"value\": 1, \"suit\": 3}", antigrav);
     }
     private class ExtensionDataTestClass {
-        [AntigravProperty]
+        [AntigravSerializable]
         public Card Card1 = new(Values.Ace, Suits.Spades);
-        [AntigravProperty("card name or not really idk")]
+        [AntigravSerializable("card name or not really idk")]
         public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
         [AntigravExtensionData]
         public Dictionary<string, int> extensionData = new() { { "a", 2 }, { "b", 314 } };
@@ -269,5 +271,30 @@ public class AntigravEncoderTest {
         List<Tuple<int, int>> value = [new Tuple<int, int>(12, 34), new Tuple<int, int>(34, 45)];
         string antigrav = DumpToString(value);
         Assert.AreEqual("[[12, 34], [34, 45]]", antigrav);
+    }
+    private class SerializeWithConditionTest : IConditionalAntigravSerializable {
+        [AntigravSerializable("ints")]
+        public List<int> Ints { get; set; } = [];
+
+        [AntigravSerializable("ъ")]
+        public string text = "this product contains 23 kg of sodium hydroxide";
+        public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
+            if (memberInfo is FieldInfo fieldInfo) {
+                if (fieldInfo.Name == "text") // or serializable.Name == "ъ"
+                    return Ints.Contains(3);
+            }
+            return true;
+        }
+    }
+    [TestMethod]
+    public void Encode_WithCondition() {
+        var value = new SerializeWithConditionTest();
+        Assert.AreEqual("{\"ints\": []}", DumpToString(value));
+        value.Ints.Add(1);
+        Assert.AreEqual("{\"ints\": [1]}", DumpToString(value));
+        value.Ints.Add(2);
+        Assert.AreEqual("{\"ints\": [1, 2]}", DumpToString(value));
+        value.Ints.Add(3);
+        Assert.AreEqual("{\"ints\": [1, 2, 3], \"\\u044a\": \"this product contains 23 kg of sodium hydroxide\"}", DumpToString(value));
     }
 }

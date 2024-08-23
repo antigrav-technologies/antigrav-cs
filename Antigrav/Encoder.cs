@@ -178,21 +178,21 @@ internal static class Encoder {
 
         static Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
+            bool converted = false;
             foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
-                AntigravProperty? antigravProperty = member.GetCustomAttribute<AntigravProperty>();
+                AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
+                if (antigravSerializable != null || antigravExtensionData != null) converted = true;
                 if (member is PropertyInfo property) {
-                    if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? property.Name, property.GetValue(o));
-                    if (antigravExtensionData != null) {
-                        dictionary = dictionary.Concat(((IDictionary)property.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)property.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
-                    }
+                    if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, property)))) dictionary.Add(antigravSerializable.Name ?? property.Name, property.GetValue(o));
+                    if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)property.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)property.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
                 }
                 if (member is FieldInfo field) {
-                    if (antigravProperty != null) dictionary.Add(antigravProperty.Name ?? field.Name, field.GetValue(o));
+                    if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, field)))) dictionary.Add(antigravSerializable.Name ?? field.Name, field.GetValue(o));
                     if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)field.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)field.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
                 }
             }
-            if (dictionary.Count == 0) throw new ArgumentException($"Type is not Antigrav Serializable: {o.GetType()}");
+            if (!converted) throw new ArgumentException($"Type is not Antigrav Serializable: {o.GetType()}");
             return dictionary;
         }
 

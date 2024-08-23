@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Antigrav</id>
-    <version>1.4</version>
+    <version>1.5</version>
     <Authors>Tema5002 &lt;xtema5002x@gmail.com&gt;</Authors>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>

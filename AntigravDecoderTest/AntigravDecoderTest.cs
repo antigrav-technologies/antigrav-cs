@@ -229,9 +229,9 @@ public class AntigravDecoderTest {
             Value = value;
             Suit = suit;
         }
-        [AntigravProperty("value")]
+        [AntigravSerializable("value")]
         public Values? Value { get; private set; }
-        [AntigravProperty("suit")]
+        [AntigravSerializable("suit")]
         public Suits? Suit { get; private set; }
         public override string ToString() => $"{Value} of {Suit}";
     }
@@ -244,9 +244,9 @@ public class AntigravDecoderTest {
             Value = value;
             Suit = suit;
         }
-        [AntigravProperty("value")]
+        [AntigravSerializable("value")]
         public Values? Value;
-        [AntigravProperty("suit")]
+        [AntigravSerializable("suit")]
         public Suits? Suit;
         public override string ToString() => $"{Value} of {Suit}";
     }
@@ -285,10 +285,10 @@ public class AntigravDecoderTest {
         Assert.IsTrue(Values.Ace == value.Value && Suits.Spades == value.Suit);
     }
     private class ExtensionDataTestClass {
-        [AntigravProperty]
+        [AntigravSerializable]
         private Card Card1 = new(Values.Ace, Suits.Spades);
         public Card GetCard1() => Card1;
-        [AntigravProperty("card name or not really idk")]
+        [AntigravSerializable("card name or not really idk")]
         public Card Card2 { get; private set; } = new Card(Values.Seven, Suits.Diamonds);
         [AntigravExtensionData]
         public Dictionary<string, int> extensionData = new() { { "a", 2 }, { "b", 314 } };
@@ -348,14 +348,14 @@ public class AntigravDecoderTest {
         NetscapeAd = 10013
     }
     private class Inventory {
-        [AntigravProperty("achs")]
+        [AntigravSerializable("achs")]
         public List<string> Achievements { get; private set; } = [];
 
-        [AntigravProperty("fastest_catch")]
+        [AntigravSerializable("fastest_catch")]
         private double fastestCatch = float.PositiveInfinity;
         public double FastestCatch { get => fastestCatch; set => fastestCatch = Math.Min(fastestCatch, value); }
 
-        [AntigravProperty("slowest_catch")]
+        [AntigravSerializable("slowest_catch")]
         private double slowestCatch = float.NegativeInfinity;
         public double SlowestCatch { get => slowestCatch; set => slowestCatch = Math.Max(slowestCatch, value); }
 
