@@ -14,6 +14,7 @@ public static class Main {
         public object? DefaultValue { get; } = defaultValue;
         public bool LoadAsNull { get; } = loadAsNull;
     }
+
     /// <summary>
     /// Used to make specific properties or fields not serializable under some condition with this interface
     /// </summary>
@@ -44,6 +45,7 @@ public static class Main {
     public interface IConditionalAntigravSerializable {
         public abstract bool SerializeIt(AntigravSerializable serializable, System.Reflection.MemberInfo memberInfo);
     }
+
     /// <summary>
     /// When placed on a property or field of type System.Collections.Generic.IDictionary`2, any
     /// properties that do not have a matching member are added to that dictionary during
@@ -172,7 +174,7 @@ public static class Main {
     /// <typeparam name="T">Object type to deserialize</typeparam>
     /// <param name="stream">Stream to read</param>
     /// <returns>Deserialized object</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="AntigravCastingError"></exception>
     /// <exception cref="AntigravDecodeError"></exception>
     public static T? Load<T>(
         Stream stream,
@@ -191,7 +193,7 @@ public static class Main {
     /// <typeparam name="T">Object type to deserialize</typeparam>
     /// <param name="s">String to deserialize</param>
     /// <returns>Deserialized object</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="AntigravCastingError"></exception>
     /// <exception cref="AntigravDecodeError"></exception>
     public static T? LoadFromString<T>(string s) => Decoder.Decode<T>(s);
 
@@ -201,7 +203,7 @@ public static class Main {
     /// <typeparam name="T">Object type to deserialize</typeparam>
     /// <param name="filePath">File to read</param>
     /// <returns>Deserialized object</returns>
-    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="AntigravCastingError"></exception>
     /// <exception cref="AntigravDecodeError"></exception>
     public static T? LoadFromFile<T>(string filePath) => Decoder.Decode<T>(File.ReadAllText(filePath));
 }
