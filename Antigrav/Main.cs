@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace Antigrav;
+﻿namespace Antigrav;
 
 public static class Main {
     /// <summary>
