@@ -2,17 +2,18 @@
 
 public static class Main {
     /// <summary>
-    /// Provides metadata to make property or field serializable
+    /// Provides metadata to make property or field serializable.
     /// </summary>
     /// <param name="name">The name of the property or field in the serialized output. If not specified then original name is used</param>
     /// <param name="defaultValue">Default value for the property or field if it's missing</param>
     /// <param name="serializeIf">Serializes if true, skips property otherwise</param>
+    /// <param name="loadAsNull">If <paramref name="defaultValue"/>defaultValue</paramref> is null, then if this argument is false, this field/property will be loaded as new instance (0, '\x0', new List<int> { }, null, etc.), keeps null otherwise (do not use on strings!)</param>
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class AntigravSerializable(string? name = null, object? defaultValue = null) : Attribute {
+    public class AntigravSerializable(string? name = null, object? defaultValue = null, bool loadAsNull = false) : Attribute {
         public string? Name { get; } = name;
         public object? DefaultValue { get; } = defaultValue;
+        public bool LoadAsNull { get; } = loadAsNull;
     }
-
     /// <summary>
     /// Used to make specific properties or fields not serializable under some condition with this interface
     /// </summary>

@@ -46,7 +46,7 @@ private class Card {
         Value = value;
         Suit = suit;
     }
-    [AntigravSerializable("value")]
+    [AntigravSerializable("value")] // warning, if you use fields then implement a set method.
     public Values? Value { get; private set; }
     [AntigravSerializable("suit")]
     public Suits? Suit { get; private set; }

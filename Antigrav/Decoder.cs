@@ -120,9 +120,13 @@ namespace Antigrav {
                     AntigravSerializable? antigravProperty = property.GetCustomAttribute<AntigravSerializable>();
                     if (antigravProperty != null) {
                         string name = antigravProperty.Name ?? property.Name;
-                        var value = antigravProperty.DefaultValue ?? Activator.CreateInstance(property.PropertyType);
-                        if (dictionary.TryGetValue(name, out var v)) {
-                            value = v;
+                        object? value;
+                        if (!dictionary.ContainsKey(name)) {
+                            value = antigravProperty.DefaultValue;
+                            if (antigravProperty.LoadAsNull) value ??= Activator.CreateInstance(property.PropertyType);
+                        }
+                        else {
+                            value = dictionary[name];
                             dictionary.Remove(name);
                         }
                         property.SetValue(target, ChangeType(value, property.PropertyType));
@@ -133,9 +137,13 @@ namespace Antigrav {
                     AntigravSerializable? antigravField = field.GetCustomAttribute<AntigravSerializable>();
                     if (antigravField != null) {
                         string name = antigravField.Name ?? field.Name;
-                        var value = antigravField.DefaultValue ?? Activator.CreateInstance(field.FieldType);
-                        if (dictionary.TryGetValue(name, out var v)) {
-                            value = v;
+                        object? value;
+                        if (!dictionary.ContainsKey(name)) {
+                            value = antigravField.DefaultValue;
+                            if (antigravField.LoadAsNull) value ??= Activator.CreateInstance(field.FieldType);
+                        }
+                        else {
+                            value = dictionary[name];
                             dictionary.Remove(name);
                         }
                         field.SetValue(target, ChangeType(value, field.FieldType));

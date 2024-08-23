@@ -369,10 +369,25 @@ public class AntigravDecoderTest {
         var expected = new Inventory {
             Ctqas = new() { { CtqaType.Fine, 1 } }
         };
-        Console.WriteLine(DumpToString(value));
         CollectionAssert.AreEqual(expected.Ctqas, value.Ctqas);
         CollectionAssert.AreEqual(expected.Achievements, value.Achievements);
         Assert.AreEqual(expected.FastestCatch, value.FastestCatch);
         Assert.AreEqual(expected.SlowestCatch, value.SlowestCatch);
+    }
+    private struct SpawnMessageData(CtqaType type = CtqaType.Unknown, ulong messageId = 0, string sayToCatch = "ctqa") {
+        [AntigravSerializable("type")]
+        public CtqaType Type { get; private set; } = type;
+        [AntigravSerializable("message_id")]
+        public ulong MessageId { get; private set; } = messageId;
+        [AntigravSerializable("say_to_catch")]
+        public string SayToCatch { get; private set; } = sayToCatch;
+    }
+
+    [TestMethod]
+    public void Decode_CtqaBtoSpawnMessageData() {
+        string antigrav = "{1196792237783273573L: {\"type\": 4, \"message_id\": 1276595838700884172L, \"say_to_catch\": \"ctqa\"}}";
+        Dictionary<ulong, SpawnMessageData> value = LoadFromString<Dictionary<ulong, SpawnMessageData>>(antigrav)!;
+        Dictionary<ulong, SpawnMessageData> expected = new() { { 1196792237783273573, new SpawnMessageData(CtqaType.Uncommon, 1276595838700884172, "ctqa") } };
+        CollectionAssert.AreEqual(expected, value);
     }
 }
