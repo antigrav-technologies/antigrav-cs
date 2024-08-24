@@ -28,7 +28,7 @@ static internal class Extensions {
 }
 
 namespace Antigrav {
-    internal partial class Decoder {
+    internal static partial class Decoder {
         private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
