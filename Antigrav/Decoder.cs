@@ -2,10 +2,11 @@
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 using static Antigrav.Main;
 
-static class Extensions {
+static internal class Extensions {
     public static int End(this Match match) => match.Index + match.Length;
     public static string SubstringSafe(this string s, int startIndex, int length) => startIndex + length <= s.Length ? s.Substring(startIndex, length) : s[startIndex..];
     public static char? CharAt(this string s, int index) => index < s.Length ? s[index] : null;
@@ -14,7 +15,6 @@ static class Extensions {
         FieldInfo fieldInfo => fieldInfo.FieldType,
         _ => typeof(object)
     };
-
     public static void SetValue(this MemberInfo memberInfo, object? obj, object? value) {
         switch (memberInfo) {
             case PropertyInfo propertyInfo:
@@ -28,40 +28,31 @@ static class Extensions {
 }
 
 namespace Antigrav {
-    public partial class Decoder {
+    internal partial class Decoder {
         private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
         private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
-        [GeneratedRegex("(.*?)([\"\\\\\\x00-\\x1f])", FLAGS)]
-        private static partial Regex STRINGCHUNK();
-
-        [GeneratedRegex("[ \\t\\n\\r]*", FLAGS)]
-        private static partial Regex WHITESPACE();
         [GeneratedRegex("-?\\d+", FLAGS)]
         private static partial Regex INT();
 
-        [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)[Ff]", FLAGS)]
-        private static partial Regex FLOAT();
-
         [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)", FLAGS)]
-        private static partial Regex DOUBLE();
-
-        [GeneratedRegex("([-+]?\\d+\\.\\d+)[Mm]", FLAGS)]
-        private static partial Regex DECIMAL();
+        private static partial Regex FLOAT();
 
         [GeneratedRegex("([-+]?)((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)" +
                         "([+-])((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)i", FLAGS)]
         private static partial Regex COMPLEX();
 
         private static readonly Dictionary<char, char> BACKSLASH = new() {
-            {'"', '"'},
             {'\\', '\\'},
-            {'/', '/'},
+            {'"', '"'},
+            {'0', '\0'},
+            {'a', '\a'},
             {'b', '\b'},
-            {'f', '\f'},
+            {'t', '\t'},
             {'n', '\n'},
-            {'r', '\r'},
-            {'t', '\t'}
+            {'v', '\v'},
+            {'f', '\f'},
+            {'r', '\r'}
         };
 
         private class ConvertButNotReally {
@@ -170,130 +161,136 @@ namespace Antigrav {
             }
         }
 
-        private class StopIteration(int? value = null) : Exception("Stop iteration") {
-            public int? Value { get; } = value;
+        private class StopIteration(int value) : Exception("Stop iteration") {
+            public int Value { get; } = value;
         }
 
         public static T? Decode<T>(string s) {
             int idx = 0;
-            string _decode_string() {
-                char _decode_uXXXX() {
-                    string uni = s.SubstringSafe(idx, 4);
-                    if (uni.Length == 4) {
-                        try {
-                            return Convert.ToChar(Convert.ToInt16(uni, 16));
-                        }
-                        catch (FormatException) { }
+            string DecodeString() {
+                StringBuilder builder = new();
+                void _decode_xXX() {
+                    string uni = s.SubstringSafe(idx + 1, 2);
+                    if (uni.Length == 2 && short.TryParse(uni, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out short codePoint)) {
+                        builder.Append((char)codePoint);
+                        idx += 3;
                     }
-                    throw new AntigravDecodeError("Invalid \\uXXXX escape", uni, idx);
+                    else throw new AntigravDecodeError("Invalid \\xXX escape", uni, idx);
                 }
-                string _decode_uXXXXXXXX() {
-                    string uni = s.SubstringSafe(idx, 8);
-                    if (uni.Length == 8) {
-                        int codePoint = Convert.ToInt32(uni, 16);
-                        if (codePoint <= 0x10FFFF) return char.ConvertFromUtf32(codePoint);
+                void _decode_uXXXX() {
+                    string uni = s.SubstringSafe(idx + 1, 4);
+                    if (uni.Length == 4 && short.TryParse(uni, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out short codePoint)) {
+                        builder.Append((char)codePoint);
+                        idx += 5;
                     }
-                    throw new AntigravDecodeError("Invalid \\uXXXXXXXX escape", uni, idx);
+                    else throw new AntigravDecodeError("Invalid \\uXXXX escape", uni, idx);
                 }
-                string buf = "";
+                void _decode_uXXXXXXXX() {
+                    string uni = s.SubstringSafe(idx + 1, 8);
+                    if (uni.Length == 8 && int.TryParse(uni, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out int codePoint)) {
+                        builder.Append(char.ConvertFromUtf32(codePoint));
+                        idx += 9;
+                    }
+                    else throw new AntigravDecodeError("Invalid \\uXXXXXXXX escape", uni, idx);
+                }
+
                 int begin = idx - 1;
                 while (true) {
-                    Match chunk = STRINGCHUNK().Match(s, idx);
-                    if (!chunk.Success) throw new AntigravDecodeError("Unterminated string starting at", s, begin);
-                    idx = chunk.End();
-                    buf += chunk.Groups[1].Value;
-                    string terminator = chunk.Groups[2].Value;
-                    if (terminator == "\"") break;
-                    if (terminator != "\\") throw new AntigravDecodeError($"Invalid control character {Regex.Escape(terminator)} at", s, idx);
-                    char esc = s.CharAt(idx++) ?? throw new AntigravDecodeError("Unterminated string starting at", s, begin);
-                    if (!"Uu".Contains(esc)) {
-                        if (BACKSLASH.TryGetValue(esc, out char value)) {
-                            buf += value;
-                        }
-                        else {
-                            throw new AntigravDecodeError($"Invalid \\escape: {esc}", s, idx);
-                        }
+                    int startIndex = idx;
+                    while (!(s[idx] == '"' || s[idx] == '\\' || ('\x00' <= s[idx] && s[idx] <= '\x1f'))) {
+                        unchecked { idx++; }
+                        if (idx >= s.Length) throw new AntigravDecodeError("Unterminated string starting at", s, begin);
+                    }
+                    builder.Append(s[startIndex..idx]);
+                    char terminator = s[idx++];
+                    if (terminator == '\"') break;
+                    if (terminator != '\\') throw new AntigravDecodeError($"Invalid control character {DumpToString(terminator)} at", s, idx - 1);
+                    char esc = s.CharAt(idx) ?? throw new AntigravDecodeError("Unterminated string starting at", s, begin);
+                    if (esc == 'x') _decode_xXX();
+                    else if (esc == 'u') _decode_uXXXX();
+                    else if (esc == 'U') _decode_uXXXXXXXX();
+                    else if (BACKSLASH.TryGetValue(esc, out char value)) {
+                        builder.Append(value);
                         idx++;
                     }
-                    if (esc == 'u') {
-                        buf += _decode_uXXXX();
-                        idx += 4;
-                    }
-                    if (esc == 'U') {
-                        buf += _decode_uXXXXXXXX();
-                        idx += 8;
+                    else {
+                        throw new AntigravDecodeError($"Invalid \\ escape: {esc}", s, idx);
                     }
                 }
-                return buf;
+                return builder.ToString();
             }
 
-            void _expect_char(char c) {
-                _expect_whitespace();
+            void ExpectChar(char c) {
+                SkipWhitespace();
                 if (s[idx] != c) {
                     throw new AntigravDecodeError($"Expecting '{c}' delimiter", s, idx);
                 }
                 idx++;
             }
 
-            void _expect_whitespace() => idx = WHITESPACE().Match(s, idx).End();
+            void SkipWhitespace() {
+                while (idx < s.Length && " \t\n\r".Contains(s[idx])) {
+                    unchecked { idx++; }
+                }
+            }
 
-            Dictionary<object, object?> _decode_dict() {
+            Dictionary<object, object?> DecodeDict() {
                 Dictionary<object, object?> pairs = [];
 
-                _expect_whitespace();
-                char? nextchar = s.CharAt(idx);
-                if (nextchar == '}') {
+                SkipWhitespace();
+                if (s.CharAt(idx) == '}') {
                     idx++;
                     return pairs;
                 }
 
                 while (true) {
-                    _expect_whitespace();
-                    object key = _decode() ?? throw new ArgumentException("Dictionaries keys can't be null");
-
-                    _expect_char(':');
-                    _expect_whitespace();
+                    SkipWhitespace();
+                    object key = DecodeAny() ?? throw new ArgumentException("Dictionaries keys can't be null");
+                    ExpectChar(':');
 
                     try {
-                        pairs.Add(key, _decode());
+                        SkipWhitespace();
+                        pairs.Add(key, DecodeAny());
                     }
                     catch (StopIteration err) {
-                        throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
+                        throw new AntigravDecodeError("Expecting value", s, err.Value);
                     }
 
-                    _expect_whitespace();
+                    SkipWhitespace();
                     if (s.CharAt(idx) == '}') {
                         idx++;
                         return pairs;
                     }
-                    _expect_char(',');
+                    ExpectChar(',');
                 }
             }
 
-            List<object?> _decode_list() {
+            List<object?> DecodeList() {
                 List<object?> values = [];
-                _expect_whitespace();
+                SkipWhitespace();
                 char? nextchar = s.CharAt(idx);
                 if (nextchar == ']') {
                     idx++;
                     return values;
                 }
                 while (true) {
-                    _expect_whitespace();
+                    SkipWhitespace();
                     try {
-                        values.Add(_decode());
+                        values.Add(DecodeAny());
                     }
                     catch (StopIteration err) {
-                        throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
+                        throw new AntigravDecodeError("Expecting value", s, err.Value);
                     }
-                    _expect_whitespace();
-                    nextchar = s.CharAt(idx++);
-                    if (nextchar == ']') return values;
-                    if (nextchar != ',') throw new AntigravDecodeError("Expecting ',' delimiter", s, idx);
+                    SkipWhitespace();
+                    if (s.CharAt(idx) == ']') {
+                        idx++;
+                        return values;
+                    }
+                    ExpectChar(',');
                 }
             }
 
-            object? _decode() {
+            object? DecodeAny() {
                 char nextchar;
                 try {
                     nextchar = s[idx];
@@ -304,15 +301,15 @@ namespace Antigrav {
 
                 if (nextchar == '"') {
                     idx++;
-                    return _decode_string();
+                    return DecodeString();
                 }
                 if (nextchar == '{') {
                     idx++;
-                    return _decode_dict();
+                    return DecodeDict();
                 }
                 if (nextchar == '[') {
                     idx++;
-                    return _decode_list();
+                    return DecodeList();
                 }
                 if (nextchar == 'n' && s.SubstringSafe(idx, 4) == "null") {
                     idx += 4;
@@ -351,41 +348,34 @@ namespace Antigrav {
                     idx = match.End();
                     return new Complex(real, imag);
                 }
-                match = DECIMAL().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    return decimal.Parse(match.Groups[1].Value);
-                }
                 match = FLOAT().Match(s, idx);
                 if (match.Success && match.Index == idx) {
+                    idx = match.End();
                     var sign = match.Groups[1].Value;
                     var rest = match.Groups[2].Value;
                     if (rest != null) {
-                        float value;
-
-                        if (rest == "inf") value = float.PositiveInfinity;
-                        else if (rest == "nan") value = float.NaN;
-                        else value = float.Parse(rest);
-                        if (sign == "-") value *= -1;
-
-                        idx = match.End();
-                        return value;
-                    }
-                }
-                match = DOUBLE().Match(s, idx);
-                if (match.Success && match.Index == idx) {
-                    var sign = match.Groups[1].Value;
-                    var rest = match.Groups[2].Value;
-                    if (rest != null) {
-                        double value;
-
-                        if (rest == "inf") value = double.PositiveInfinity;
-                        else if (rest == "nan") value = double.NaN;
-                        else value = double.Parse(rest);
-                        if (sign == "-") value *= -1;
-
-                        idx = match.End();
-                        return value;
+                        switch (char.ToUpper(s.CharAt(idx) ?? 'ъ')) {
+                            case 'F':
+                                idx++;
+                                float value1;
+                                if (rest == "inf") value1 = float.PositiveInfinity;
+                                else if (rest == "nan") value1 = float.NaN;
+                                else value1 = float.Parse(rest);
+                                if (sign == "-") value1 *= -1;
+                                return value1;
+                            case 'M':
+                                idx++;
+                                decimal value2 = decimal.Parse(rest);
+                                if (sign == "-") value2 *= -1;
+                                return value2;
+                            default:
+                                double value3;
+                                if (rest == "inf") value3 = double.PositiveInfinity;
+                                else if (rest == "nan") value3 = double.NaN;
+                                else value3 = double.Parse(rest);
+                                if (sign == "-") value3 *= -1;
+                                return value3;
+                        }
                     }
                 }
                 match = INT().Match(s, idx);
@@ -430,10 +420,10 @@ namespace Antigrav {
 
             object? o;
             try {
-                o = _decode();
+                o = DecodeAny();
             }
             catch (StopIteration err) {
-                throw new AntigravDecodeError("Expecting value", s, (int)err.Value!);
+                throw new AntigravDecodeError("Expecting value", s, err.Value);
             }
             if (idx != s.Length) throw new AntigravDecodeError("Extra data", s, idx);
             return (T?)ConvertButNotReally.ChangeType(o, typeof(T?));

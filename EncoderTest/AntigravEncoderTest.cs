@@ -297,4 +297,11 @@ public class AntigravEncoderTest {
         value.Ints.Add(3);
         Assert.AreEqual("{\"ints\": [1, 2, 3], \"\\u044a\": \"this product contains 23 kg of sodium hydroxide\"}", DumpToString(value));
     }
+
+    [TestMethod]
+    public void Encode_StringWithEscape() {
+        string value = "@everyone у вас спина #FFFFFF 🚜🚜🚜\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x30\x40";
+        string antigrav = DumpToString(value);
+        Assert.AreEqual("\"@everyone \\u0443 \\u0432\\u0430\\u0441 \\u0441\\u043f\\u0438\\u043d\\u0430 #FFFFFF \\U0001f69c\\U0001f69c\\U0001f69c\\0\\x01\\x02\\x03\\x04\\x05\\x06\\a\\b\\t\\n\\v\\f\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b\\x1c\\x1d\\x1e\\x1f 0@\"", antigrav);
+    }
 }

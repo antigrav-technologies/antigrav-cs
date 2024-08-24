@@ -8,167 +8,167 @@ public class AntigravDecoderTest {
     [TestMethod]
     public void Decode_Sbyte() {
         string antigrav = "123b";
-        sbyte value = Antigrav.Main.LoadFromString<sbyte>(antigrav);
+        sbyte value = LoadFromString<sbyte>(antigrav);
         Assert.AreEqual((sbyte)123, value);
     }
 
     [TestMethod]
     public void Decode_Byte() {
         string antigrav = "234B";
-        byte value = Antigrav.Main.LoadFromString<byte>(antigrav);
+        byte value = LoadFromString<byte>(antigrav);
         Assert.AreEqual((byte)234, value);
     }
 
     [TestMethod]
     public void Decode_Short() {
         string antigrav = "4325s";
-        short value = Antigrav.Main.LoadFromString<short>(antigrav);
+        short value = LoadFromString<short>(antigrav);
         Assert.AreEqual((short)4325, value);
     }
 
     [TestMethod]
     public void Decode_Ushort() {
         string antigrav = "43553S";
-        ushort value = Antigrav.Main.LoadFromString<ushort>(antigrav);
+        ushort value = LoadFromString<ushort>(antigrav);
         Assert.AreEqual((ushort)43553, value);
     }
 
     [TestMethod]
     public void Decode_Integer() {
         string antigrav = "42";
-        int value = Antigrav.Main.LoadFromString<int>(antigrav);
+        int value = LoadFromString<int>(antigrav);
         Assert.AreEqual(42, value);
     }
 
     [TestMethod]
     public void Decode_Uint() {
         string antigrav = "42I";
-        uint value = Antigrav.Main.LoadFromString<uint>(antigrav);
+        uint value = LoadFromString<uint>(antigrav);
         Assert.AreEqual((uint)42, value);
     }
 
     [TestMethod]
     public void Decode_Long() {
         string antigrav = "243974364379348l";
-        long value = Antigrav.Main.LoadFromString<long>(antigrav);
+        long value = LoadFromString<long>(antigrav);
         Assert.AreEqual(243974364379348, value);
     }
 
     [TestMethod]
     public void Decode_Ulong() {
         string antigrav = "243974364379348L";
-        ulong value = Antigrav.Main.LoadFromString<ulong>(antigrav);
+        ulong value = LoadFromString<ulong>(antigrav);
         Assert.AreEqual((ulong)243974364379348, value);
     }
 
     [TestMethod]
     public void Decode_LLong() {
         string antigrav = "974364379348ll";
-        Int128 value = Antigrav.Main.LoadFromString<Int128>(antigrav);
+        Int128 value = LoadFromString<Int128>(antigrav);
         Assert.AreEqual((Int128)974364379348, value);
     }
 
     [TestMethod]
     public void Decode_ULLong() {
         string antigrav = "974364379348LL";
-        UInt128 value = Antigrav.Main.LoadFromString<UInt128>(antigrav);
+        UInt128 value = LoadFromString<UInt128>(antigrav);
         Assert.AreEqual((UInt128)974364379348, value);
     }
 
     [TestMethod]
     public void Decode_Float() {
         string antigrav = "3.14F";
-        float value = Antigrav.Main.LoadFromString<float>(antigrav);
+        float value = LoadFromString<float>(antigrav);
         Assert.AreEqual(3.14f, value);
     }
 
     [TestMethod]
     public void Decode_Double() {
         string antigrav = "3.14";
-        double value = Antigrav.Main.LoadFromString<double>(antigrav);
+        double value = LoadFromString<double>(antigrav);
         Assert.AreEqual(3.14, value);
     }
 
     [TestMethod]
     public void Decode_Float1() {
         string antigrav = "1.0F";
-        float value = Antigrav.Main.LoadFromString<float>(antigrav);
+        float value = LoadFromString<float>(antigrav);
         Assert.AreEqual(1.0f, value);
     }
 
     [TestMethod]
     public void Decode_Decimal() {
         string antigrav = "2.694102949283958052M";
-        decimal value = Antigrav.Main.LoadFromString<decimal>(antigrav);
+        decimal value = LoadFromString<decimal>(antigrav);
         Assert.AreEqual(2.694102949283958052M, value);
     }
 
     [TestMethod]
     public void Decode_Decimal1() {
         string antigrav = "1.0M";
-        decimal value = Antigrav.Main.LoadFromString<decimal>(antigrav);
+        decimal value = LoadFromString<decimal>(antigrav);
         Assert.AreEqual(1M, value);
     }
 
     [TestMethod]
     public void Decode_Null() {
         string antigrav = "null";
-        object? value = Antigrav.Main.LoadFromString<object?>(antigrav);
+        object? value = LoadFromString<object?>(antigrav);
         Assert.AreEqual(null, value);
     }
     [TestMethod]
     public void Decode_Bool_True() {
         string antigrav = "true";
-        bool value = Antigrav.Main.LoadFromString<bool>(antigrav);
+        bool value = LoadFromString<bool>(antigrav);
         Assert.AreEqual(true, value);
     }
 
     [TestMethod]
     public void Decode_Bool_False() {
         string antigrav = "false";
-        bool value = Antigrav.Main.LoadFromString<bool>(antigrav);
+        bool value = LoadFromString<bool>(antigrav);
         Assert.AreEqual(false, value);
     }
 
     [TestMethod]
     public void Decode_Complex1_2() {
         string antigrav = "1.0+2.0i";
-        Complex value = Antigrav.Main.LoadFromString<Complex>(antigrav);
+        Complex value = LoadFromString<Complex>(antigrav);
         Assert.AreEqual(new Complex(1.0, 2.0), value);
     }
 
     [TestMethod]
     public void Decode_ComplexPI_PHI() {
         string antigrav = "3.14+1.618i";
-        Complex value = Antigrav.Main.LoadFromString<Complex>(antigrav);
+        Complex value = LoadFromString<Complex>(antigrav);
         Assert.AreEqual(new Complex(3.14, 1.618), value);
     }
 
     [TestMethod]
     public void Decode_List_Int() {
         string antigrav = "[1, 2, 3]";
-        List<int> value = Antigrav.Main.LoadFromString<List<int>>(antigrav)!;
+        List<int> value = LoadFromString<List<int>>(antigrav)!;
         CollectionAssert.AreEqual(new List<int> { 1, 2, 3 }, value);
     }
 
     [TestMethod]
     public void Decode_List_String() {
         string antigrav = "[\"a\", \"b\", \"c\"]";
-        List<string> value = Antigrav.Main.LoadFromString<List<string>>(antigrav)!;
+        List<string> value = LoadFromString<List<string>>(antigrav)!;
         CollectionAssert.AreEqual(new List<string> { "a", "b", "c" }, value);
     }
 
     [TestMethod]
     public void Decode_Dictionary_String_String() {
         string antigrav = "{\"a\": \"b\", \"c\": \"d\"}";
-        Dictionary<string, string> value = Antigrav.Main.LoadFromString<Dictionary<string, string>>(antigrav)!;
+        Dictionary<string, string> value = LoadFromString<Dictionary<string, string>>(antigrav)!;
         CollectionAssert.AreEqual(new Dictionary<string, string> { { "a", "b" }, { "c", "d" } }, value);
     }
 
     [TestMethod]
     public void Decode_Dictionary_Int_String() {
         string antigrav = "{1: \"a\", 2: \"b\"}";
-        Dictionary<int, string> value = Antigrav.Main.LoadFromString<Dictionary<int, string>>(antigrav)!;
+        Dictionary<int, string> value = LoadFromString<Dictionary<int, string>>(antigrav)!;
         CollectionAssert.AreEqual(new Dictionary<int, string> { { 1, "a" }, { 2, "b" } }, value);
     }
 
@@ -178,7 +178,7 @@ public class AntigravDecoderTest {
 
         // apparently because of goddamn pointers CollectionAssert was a bushes so just take the print thing
 
-        Dictionary<string, object?> value = Antigrav.Main.LoadFromString<Dictionary<string, object?>>(antigrav)!;
+        Dictionary<string, object?> value = LoadFromString<Dictionary<string, object?>>(antigrav)!;
         Console.WriteLine("{");
         foreach (KeyValuePair<string, object?> kwp in value) {
             Console.WriteLine($"    {kwp.Key}: {(kwp.Value is List<object> l ? '[' + string.Join(", ", l) + ']' : kwp.Value is Dictionary<object, object> d ? '{' + string.Join(": ", d.Select(kwp => $"{kwp.Key}: {kwp.Value}")) + '}' : kwp.Value)}");
@@ -389,5 +389,12 @@ public class AntigravDecoderTest {
         Dictionary<ulong, SpawnMessageData> value = LoadFromString<Dictionary<ulong, SpawnMessageData>>(antigrav)!;
         Dictionary<ulong, SpawnMessageData> expected = new() { { 1196792237783273573, new SpawnMessageData(CtqaType.Uncommon, 1276595838700884172, "ctqa") } };
         CollectionAssert.AreEqual(expected, value);
+    }
+
+    [TestMethod]
+    public void Decode_StringWithEscape() {
+        string antigrav = "\"@everyone \\u0443 \\u0432\\u0430\\u0441 \\u0441\\u043f\\u0438\\u043d\\u0430 #FFFFFF \\U0001f69c\\U0001f69c\\U0001f69c\\0\\x01\\x02\\x03\\x04\\x05\\x06\\a\\b\\t\\n\\v\\f\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b\\x1c\\x1d\\x1e\\x1f 0@\"";
+        string value = LoadFromString<string>(antigrav)!;
+        Assert.AreEqual("@everyone у вас спина #FFFFFF 🚜🚜🚜\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f\x20\x30\x40", value);
     }
 }
