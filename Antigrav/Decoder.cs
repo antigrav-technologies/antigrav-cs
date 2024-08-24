@@ -141,7 +141,7 @@ namespace Antigrav {
                 if (type == typeof(double)) return (double)o;
                 if (type == typeof(decimal)) return (decimal)o;
                 if (type == typeof(Complex)) return (Complex)o;
-                if (o is bool @bool && type == typeof(bool)) return @bool;
+                if (type == typeof(bool)) return (bool)o;
                 if (type.IsEnum) return Enum.ToObject(type, o);
                 if (type.IsArray) return DecodeArray(o, type);
                 if (type.IsGenericType) {

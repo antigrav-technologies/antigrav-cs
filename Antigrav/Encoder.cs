@@ -117,8 +117,8 @@ internal static class Encoder {
             }
 
             text ??= o switch {
-                float f => 1e-4f < MathF.Abs(f) && MathF.Abs(f) < 1e7f ? f.ToString("0.0#####") : f.ToString(),
-                double d => 1e-4 < Math.Abs(d) && Math.Abs(d) < 1e15 ? d.ToString("0.0#############") : d.ToString(),
+                float f => (f == 0) || (1e-4f < MathF.Abs(f) && MathF.Abs(f) < 1e7f) ? f.ToString("0.0#####") : f.ToString("e"),
+                double d => (d == 0) || (1e-4 < Math.Abs(d) && Math.Abs(d) < 1e15) ? d.ToString("0.0#############") : d.ToString("e"),
                 decimal m => m.ToString("0.0#############################"),
                 _ => "idk bruvver it should never call"
             };
