@@ -10,7 +10,8 @@ Serializing library based on JSON format, so its also easy to read format.
 - floating point number: float or double or decimal
 - Complex
 - IDictionary: specified in curly brackets (`{}`). Objects are encoded as dictionaries
-- Arrays, ITuple, IList: specified in square brackets (`[]`)
+- Arrays, ITuple, List: specified in square brackets (`[]`)\
+Note that if you encode any not listed here collection it is not guranteed to be deserialized as needed
 ## Usage example
 
 ```c#
