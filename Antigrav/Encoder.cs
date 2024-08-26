@@ -74,7 +74,7 @@ internal static class Encoder {
             if (IsNumber(x) && IsNumber(y)) {
                 return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x, y is Complex complexY ? complexY.Real : y);
             }
-            throw new ArgumentException($"Keys must be string, sbyte, byte, ushort, short, int, uint, long, ulong, Int128, UInt128, float, double, decimal, Complex or bool, not {nameof(x)} and/or {nameof(y)}");
+            return 0;
         }
     }
 
