@@ -71,8 +71,9 @@ internal static class Encoder {
             if (x!.GetType().IsEnum) x = Convert.ChangeType((Enum)x, Enum.GetUnderlyingType(x.GetType()));
             if (y!.GetType().IsEnum) y = Convert.ChangeType((Enum)y, Enum.GetUnderlyingType(y.GetType()));
 
-            if (IsNumber(x) && IsNumber(y)) {
-                return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x, y is Complex complexY ? complexY.Real : y);
+            if (IsNumber(x)) {
+                if (IsNumber(y)) return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x, y is Complex complexY ? complexY.Real : y);
+                return -1;
             }
             return 0;
         }
