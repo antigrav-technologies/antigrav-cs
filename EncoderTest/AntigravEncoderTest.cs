@@ -304,4 +304,11 @@ public class AntigravEncoderTest {
         string antigrav = DumpToString(value);
         Assert.AreEqual("\"@everyone \\u0443 \\u0432\\u0430\\u0441 \\u0441\\u043f\\u0438\\u043d\\u0430 #FFFFFF \\U0001f69c\\U0001f69c\\U0001f69c\\0\\x01\\x02\\x03\\x04\\x05\\x06\\a\\b\\t\\n\\v\\f\\r\\x0e\\x0f\\x10\\x11\\x12\\x13\\x14\\x15\\x16\\x17\\x18\\x19\\x1a\\x1b\\x1c\\x1d\\x1e\\x1f 0@\"", antigrav);
     }
+
+    [TestMethod]
+    public void Encode_SortedEnumDict() {
+        Dictionary<Values, long> value = new() { { Values.Jack, 3 }, { Values.Ace, 6 }, { Values.Six, -634 } };
+        string antigrav = DumpToString(value, sortKeys: true, indent: 4);
+        Assert.AreEqual("{\n    1: 6l,\n    6: -634l,\n    11: 3l\n}", antigrav);
+    }
 }

@@ -9,9 +9,9 @@ Serializing library based on JSON format, so its also easy to read format.
 - Enum: encoded as number values
 - floating point number: float or double or decimal
 - Complex
-- IDictionary: specified in curly brackets (`{}`). Objects are encoded as dictionaries
-- Arrays, ITuple, List: specified in square brackets (`[]`)\
-Note that if you encode any not listed here collection it is not guranteed to be deserialized as needed
+- Dictionary<,>: specified in curly brackets (`{}`). Objects are encoded as dictionaries
+- Arrays, ITuple, List<>: specified in square brackets (`[]`)\
+Note that if you encode any ICollection, but because of electric caterpillars you can decode only types that are listed here
 ## Usage example
 
 ```c#
