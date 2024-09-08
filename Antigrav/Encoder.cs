@@ -9,7 +9,18 @@ using static Antigrav.Main;
 namespace Antigrav;
 
 internal static class Encoder {
-    private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
+    private static bool IsUserDefined(this MemberInfo memberInfo) => memberInfo is FieldInfo fieldInfo && fieldInfo.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Length == 0;
+    private static string Name(this MemberInfo memberInfo) => memberInfo switch {
+        PropertyInfo propertyInfo => propertyInfo.Name,
+        FieldInfo fieldInfo => fieldInfo.Name,
+        _ => "ъ"
+    };
+    private static object? GetValue(this MemberInfo memberInfo, object? o) => memberInfo switch {
+        PropertyInfo propertyInfo => propertyInfo.GetGetMethod() == null ? null : propertyInfo.GetValue(o),
+        FieldInfo fieldInfo => fieldInfo.GetValue(o),
+        _ => null
+    };
+    private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly;
     private static readonly Dictionary<char, string> ESCAPE_DICT = new() {
         {'\\', "\\\\"},
         {'"', "\\\""},
@@ -56,7 +67,7 @@ internal static class Encoder {
         )
     );
 
-    // i hope i dont forget why i called a class so in the feature
+    // i hope i dont forget why i called a class so in the future
     private class NoneOfYourGoddamnBusinees : IComparer<object?> {
         private static bool IsNumber(object? o) => o is sbyte or byte or ushort or short or int or uint or long or ulong or Int128 or UInt128 or float or double or decimal or Complex;
 
@@ -84,7 +95,8 @@ internal static class Encoder {
         bool sortKeys,
         uint? indent,
         bool ensureASCII,
-        bool allowNaN
+        bool allowNaN,
+        bool forceSave
     ) {
         StringBuilder builder = new();
         Func<string, string> stringEncoder = ensureASCII ? EncodeStringASCII : EncodeString;
@@ -179,19 +191,16 @@ internal static class Encoder {
             }
         }
 
-        static Dictionary<object, object?> ObjectToDict(object o) {
+        Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
             foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
                 AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
-                if (member is PropertyInfo property) {
-                    if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, property)))) dictionary.Add(antigravSerializable.Name ?? property.Name, property.GetValue(o));
-                    if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)property.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)property.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
-                }
-                if (member is FieldInfo field) {
-                    if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, field)))) dictionary.Add(antigravSerializable.Name ?? field.Name, field.GetValue(o));
-                    if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)field.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)field.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
-                }
+                string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
+                object? value = member.GetValue(o);
+                if (forceSave && member.IsUserDefined()) dictionary.Add(name, value);
+                else if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, member)))) dictionary.Add(name, value);
+                else if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)member.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)member.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
             }
             return dictionary;
         }

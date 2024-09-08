@@ -29,7 +29,7 @@ static internal class Extensions {
 
 namespace Antigrav {
     internal static partial class Decoder {
-        private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+        private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
         [GeneratedRegex("-?\\d+", FLAGS)]
@@ -103,11 +103,15 @@ namespace Antigrav {
                 if (o is not Dictionary<object, object>) throw new AntigravCastingError(o.GetType(), type);
                 object target = TryCreateObject(type);
                 var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
-                foreach (var member in type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
+                foreach (var member in type.GetMembers(BINDING_FLAGS).Where(m => m.MemberType == MemberTypes.Property || m.MemberType == MemberTypes.Field)) {
                     AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
-                    if (antigravSerializable == null) continue;
-                    string name = antigravSerializable.Name ?? member.Name;
-                    member.SetValue(target, ChangeType(dictionary.TryGetValue(name, out var v) ? v : (antigravSerializable.LoadAsNull ? antigravSerializable.DefaultValue : antigravSerializable.DefaultValue ?? TryCreateObject(member.Type())), member.Type()));
+                    string name = antigravSerializable == null ? member.Name : antigravSerializable.Name ?? member.Name;
+                    if (antigravSerializable != null) {
+                        member.SetValue(target, ChangeType(dictionary.TryGetValue(name, out var v) ? v : (antigravSerializable.LoadAsNull ? antigravSerializable.DefaultValue : antigravSerializable.DefaultValue ?? TryCreateObject(member.Type())), member.Type()));
+                    }
+                    else if (dictionary.ContainsKey(member.Name)) {
+                        member.SetValue(target, ChangeType(dictionary[name], member.Type()));
+                    }
                     dictionary.Remove(name);
                 }
                 MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<AntigravExtensionData>() != null);

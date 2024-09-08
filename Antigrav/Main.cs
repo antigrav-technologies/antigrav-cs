@@ -79,8 +79,9 @@ public static class Main {
         bool sortKeys = false,
         uint? indent = null,
         bool ensureASCII = true,
-        bool allowNaN = true
-    ) => File.WriteAllText(filePath, DumpToString(o, sortKeys, indent, ensureASCII, allowNaN));
+        bool allowNaN = true,
+        bool forceSave = false
+    ) => File.WriteAllText(filePath, DumpToString(o, sortKeys, indent, ensureASCII, allowNaN, forceSave));
     /// <summary>
     /// Serialize object as an Antigrav string
     /// </summary>
@@ -96,8 +97,9 @@ public static class Main {
         bool sortKeys = false,
         uint? indent = null,
         bool ensureASCII = true,
-        bool allowNaN = true
-    ) => Encoder.Encode(o, sortKeys, indent, ensureASCII, allowNaN);
+        bool allowNaN = true,
+        bool forceSave = false
+    ) => Encoder.Encode(o, sortKeys, indent, ensureASCII, allowNaN, forceSave);
 
     /// <summary>
     /// Write object serialized as an Antigrav string to stream
@@ -127,8 +129,9 @@ public static class Main {
         bool sortKeys = false,
         uint? indent = null,
         bool ensureASCII = true,
-        bool allowNaN = true
-    ) => stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(o, sortKeys, indent, ensureASCII, allowNaN)));
+        bool allowNaN = true,
+        bool forceSave = false
+    ) => stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(o, sortKeys, indent, ensureASCII, allowNaN, forceSave)));
 
     private static string DetectEncoding(byte[] bytes) {
         if (bytes.Length >= 2 && (bytes[0] == 0xFE && bytes[1] == 0xFF || // UTF-32 BE

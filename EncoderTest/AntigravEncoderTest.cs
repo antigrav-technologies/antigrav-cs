@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
 using static Antigrav.Main;
 
 namespace EncoderTest;
@@ -311,4 +310,18 @@ public class AntigravEncoderTest {
         string antigrav = DumpToString(value, sortKeys: true, indent: 4);
         Assert.AreEqual("{\n    1: 6l,\n    6: -634l,\n    11: 3l\n}", antigrav);
     }
+    /*
+    private class Test() {
+        [AntigravSerializable]
+        public Test? test;
+    }
+    [TestMethod]
+    public void TheMostInformativeVideo() {
+        var a = new Test();
+        var b = new Test();
+        a.test = b;
+        b.test = a;
+        DumpToString(a);
+        Assert.Fail("stack overflow failed");
+    }*/
 }
