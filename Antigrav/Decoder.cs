@@ -354,10 +354,10 @@ namespace Antigrav {
                 }
                 match = FLOAT().Match(s, idx);
                 if (match.Success && match.Index == idx) {
-                    idx = match.End();
-                    var sign = match.Groups[1].Value;
                     var rest = match.Groups[2].Value;
                     if (rest != null) {
+                        var sign = match.Groups[1].Value;
+                        idx = match.End();
                         switch (char.ToUpper(s.CharAt(idx) ?? 'ъ')) {
                             case 'F':
                                 idx++;

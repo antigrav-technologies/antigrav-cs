@@ -72,6 +72,7 @@ public static class Main {
     /// <param name="indent">Amount of spaces to indent, no indent if null</param>
     /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+    /// <param name="forceSave">Saves every single field/property even if its not AntigravSerializable</param>
     /// <exception cref="ArgumentException"></exception>
     public static void DumpToFile(
         object? o,
@@ -90,6 +91,7 @@ public static class Main {
     /// <param name="indent">Amount of spaces to indent, no indent if null</param>
     /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+    /// <param name="forceSave">Saves every single field/property even if its not AntigravSerializable</param>
     /// <returns>Antigrav serialized string</returns>
     /// <exception cref="ArgumentException"></exception>
     public static string DumpToString(
@@ -109,6 +111,7 @@ public static class Main {
     /// <param name="indent">Amount of spaces to indent, no indent if null</param>
     /// <param name="ensureASCII">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
+    /// <param name="forceSave">Saves every single field/property even if its not AntigravSerializable</param>
     /// <example><code>
     /// Dictionary<string, int> value = new Dictionary<string, int> { {"1", 2}, {"3", 4} };
     /// using (System.IO.StreamWriter writer = new System.IO.StreamWriter("D:\\toaster oven.txt")) {
