@@ -1,68 +1,70 @@
 ﻿namespace Antigrav;
 
-public static class Main {
-    /// <summary>
-    /// Provides metadata to make property or field serializable.
-    /// </summary>
-    /// <param name="name">The name of the property or field in the serialized output. If not specified then original name is used</param>
-    /// <param name="defaultValue">Default value for the property or field if it's missing</param>
-    /// <param name="serializeIf">Serializes if true, skips property otherwise</param>
-    /// <param name="loadAsNull">If <paramref name="defaultValue"/>defaultValue</paramref> is null, then if this argument is false, this field/property will be loaded as new instance (0, '\x0', new List<int> { }, null, etc.), keeps null otherwise (do not use on strings!)</param>
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
-    public class AntigravSerializable(string? name = null, object? defaultValue = null, bool loadAsNull = false) : Attribute {
-        public string? Name { get; } = name;
-        public object? DefaultValue { get; } = defaultValue;
-        public bool LoadAsNull { get; } = loadAsNull;
-    }
 
-    /// <summary>
-    /// Used to make specific properties or fields not serializable under some condition with this interface
-    /// </summary>
-    /// <example>
-    /// <code>
-    /// using System.Reflection;
-    /// using static Antigrav.Main;
-    /// 
-    /// public class SerializeWithConditionExample : IConditionalAntigravSerializable {
-    ///     [AntigravSerializable("ints")]
-    ///     public List<int> Ints { get; set; } = [];
-    /// 
-    ///     [AntigravSerializable("polyhedra")]
-    ///     public string text = "kreisi burglar making pickles";
-    ///     public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
-    ///         if (memberInfo is FieldInfo fieldInfo) {
-    ///             if (fieldInfo.Name == "text") // or serializable.Name == "kreisi burglar making pickles"
-    ///                 return Ints.Contains(3);
-    ///         }
-    ///         return true;
-    ///     }
-    /// }
-    /// 
-    /// DumpToString(new SerializeWithConditionExample() { Ints = [1] }); // "{\"ints\": [1]}"
-    /// DumpToString(new SerializeWithConditionExample() { Ints = [1, 2, 3] }); // "{\"ints\": [1, 2, 3], \"\\u044a\": \"kreisi burglar making pickles\"}"
-    /// </code>
-    /// </example>
-    public interface IConditionalAntigravSerializable {
-        public abstract bool SerializeIt(AntigravSerializable serializable, System.Reflection.MemberInfo memberInfo);
-    }
+/// <summary>
+/// Provides metadata to make property or field serializable.
+/// </summary>
+/// <param name="name">The name of the property or field in the serialized output. If not specified then original name is used</param>
+/// <param name="defaultValue">Default value for the property or field if it's missing</param>
+/// <param name="serializeIf">Serializes if true, skips property otherwise</param>
+/// <param name="loadAsNull">If <paramref name="defaultValue"/>defaultValue</paramref> is null, then if this argument is false, this field/property will be loaded as new instance (0, '\x0', new List<int> { }, null, etc.), keeps null otherwise (do not use on strings!)</param>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+public class AntigravSerializable(string? name = null, object? defaultValue = null, bool loadAsNull = false) : Attribute {
+    public string? Name { get; } = name;
+    public object? DefaultValue { get; } = defaultValue;
+    public bool LoadAsNull { get; } = loadAsNull;
+}
 
-    /// <summary>
-    /// When placed on a property or field of type System.Collections.Generic.IDictionary`2, any
-    /// properties that do not have a matching member are added to that dictionary during
-    /// deserialization and written during serialization.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
-    public class AntigravExtensionData : Attribute { }
+/// <summary>
+/// Used to make specific properties or fields not serializable under some condition with this interface
+/// </summary>
+/// <example>
+/// <code>
+/// using System.Reflection;
+/// using Antigrav;
+/// using static Antigrav.AntigravConvert;
+/// 
+/// public class SerializeWithConditionExample : IConditionalAntigravSerializable {
+///     [AntigravSerializable("ints")]
+///     public List<int> Ints { get; set; } = [];
+/// 
+///     [AntigravSerializable("polyhedra")]
+///     public string text = "kreisi burglar making pickles";
+///     public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
+///         if (memberInfo is FieldInfo fieldInfo) {
+///             if (fieldInfo.Name == "text") // or serializable.Name == "kreisi burglar making pickles"
+///                 return Ints.Contains(3);
+///         }
+///         return true;
+///     }
+/// }
+/// 
+/// DumpToString(new SerializeWithConditionExample() { Ints = [1] }); // "{\"ints\": [1]}"
+/// DumpToString(new SerializeWithConditionExample() { Ints = [1, 2, 3] }); // "{\"ints\": [1, 2, 3], \"\\u044a\": \"kreisi burglar making pickles\"}"
+/// </code>
+/// </example>
+public interface IConditionalAntigravSerializable {
+    public abstract bool SerializeIt(AntigravSerializable serializable, System.Reflection.MemberInfo memberInfo);
+}
 
-    public class AntigravDecodeError(string msg, string doc, int pos) : Exception( // you do not need to create instance of it!!!!!!!!!1111111111
-    $"{msg}: " +
-        $"line {doc[..pos].Count(c => c == '\n') + 1} " +
-        $"column {(doc.LastIndexOf('\n', pos) == -1 ? pos + 1 : pos - doc.LastIndexOf('\n', pos))} " +
-        $"(char {pos})"
-    ) { }
+/// <summary>
+/// When placed on a property or field of type System.Collections.Generic.IDictionary`2, any
+/// properties that do not have a matching member are added to that dictionary during
+/// deserialization and written during serialization.
+/// </summary>
+[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+public class AntigravExtensionData : Attribute { }
 
-    public class AntigravCastingError(Type fromType, Type targetType) : Exception($"Cant cast {fromType} to {targetType}") {}
+public class AntigravDecodeError(string msg, string doc, int pos) : Exception( // you do not need to create instance of it!!!!!!!!!1111111111
+$"{msg}: " +
+    $"line {doc[..pos].Count(c => c == '\n') + 1} " +
+    $"column {(doc.LastIndexOf('\n', pos) == -1 ? pos + 1 : pos - doc.LastIndexOf('\n', pos))} " +
+    $"(char {pos})"
+) { }
 
+public class AntigravCastingError(Type fromType, Type targetType) : Exception($"Cant cast {fromType} to {targetType}") { }
+
+public static class AntigravConvert {
     /// <summary>
     /// Write object serialized as an Antigrav string to stream
     /// </summary>

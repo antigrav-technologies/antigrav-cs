@@ -4,7 +4,6 @@ using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using static Antigrav.Main;
 
 namespace Antigrav;
 
@@ -101,23 +100,18 @@ internal static class Encoder {
         StringBuilder builder = new();
         Func<string, string> stringEncoder = ensureASCII ? EncodeStringASCII : EncodeString;
 
-        void EncodeInteger(object o, bool prefix = true) {
-            builder.Append(o.ToString());
-            if (prefix) {
-                builder.Append(o switch {
-                    sbyte => "b",
-                    byte => "B",
-                    short => "s",
-                    ushort => "S",
-                    uint => "I",
-                    long => "l",
-                    ulong => "L",
-                    Int128 => "ll",
-                    UInt128 => "LL",
-                    _ => ""
-                });
-            }
-        }
+        void EncodeInteger(object o) => builder.Append(o.ToString() + o switch {
+            sbyte => "b",
+            byte => "B",
+            short => "s",
+            ushort => "S",
+            uint => "I",
+            long => "l",
+            ulong => "L",
+            Int128 => "ll",
+            UInt128 => "LL",
+            _ => ""
+        });
 
         void EncodeFloat(object o) {
             string prefix = "";

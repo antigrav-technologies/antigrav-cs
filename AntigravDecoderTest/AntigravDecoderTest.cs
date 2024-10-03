@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
-using static Antigrav.Main;
+using Antigrav;
+using static Antigrav.AntigravConvert;
 
 namespace DecoderTest;
 

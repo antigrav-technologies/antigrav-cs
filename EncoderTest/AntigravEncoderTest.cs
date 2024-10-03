@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using System.Reflection;
-using static Antigrav.Main;
+using Antigrav;
+using static Antigrav.AntigravConvert;
 
 namespace EncoderTest;
 
