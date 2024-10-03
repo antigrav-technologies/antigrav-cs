@@ -15,7 +15,7 @@ Note that if you encode any ICollection, but because of electric caterpillars yo
 ## Usage example
 
 ```c#
-using static Antigrav.Main;
+using Antigrav;
 
 private enum Values {
     Ace = 1,
@@ -57,11 +57,11 @@ private class Card {
 Card value = new(Values.Ace, Suits.Spades);
 
 // encoding
-string antigrav = DumpToString(value);
+string antigrav = AntigravConvert.DumpToString(value);
 Console.WriteLine(antigrav); // "{\"value\": 1, \"suit\": 3}"
 
 // decoding
-Card decodedValue = LoadFromString<Card>(antigrav);
+Card decodedValue = AntigravConvert.LoadFromString<Card>(antigrav);
 Console.WriteLine(decodedValue); // "Ace of Spades"
 ```
 This was made as an experiment at first place, any tweaks in code are welcome. Dont ask why format is called so, the origin was extremely stupid
