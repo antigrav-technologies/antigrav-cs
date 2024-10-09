@@ -15,7 +15,7 @@ internal static class Encoder {
         _ => "ъ"
     };
     private static object? GetValue(this MemberInfo memberInfo, object? o) => memberInfo switch {
-        PropertyInfo propertyInfo => (propertyInfo.GetGetMethod() ?? throw new InvalidOperationException($"Property {propertyInfo.Name} does not have a getter method.")).Invoke(o, null),
+        PropertyInfo propertyInfo => propertyInfo.GetValue(o),
         FieldInfo fieldInfo => fieldInfo.GetValue(o),
         _ => throw new Exception("instant death of instant death of the universe")
     };
