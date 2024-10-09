@@ -16,38 +16,6 @@ public class AntigravSerializable(string? name = null, object? defaultValue = nu
 }
 
 /// <summary>
-/// Used to make specific properties or fields not serializable under some condition with this interface
-/// </summary>
-/// <example>
-/// <code>
-/// using System.Reflection;
-/// using Antigrav;
-/// using static Antigrav.AntigravConvert;
-/// 
-/// public class SerializeWithConditionExample : IConditionalAntigravSerializable {
-///     [AntigravSerializable("ints")]
-///     public List<int> Ints { get; set; } = [];
-/// 
-///     [AntigravSerializable("polyhedra")]
-///     public string text = "kreisi burglar making pickles";
-///     public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
-///         if (memberInfo is FieldInfo fieldInfo) {
-///             if (fieldInfo.Name == "text") // or serializable.Name == "kreisi burglar making pickles"
-///                 return Ints.Contains(3);
-///         }
-///         return true;
-///     }
-/// }
-/// 
-/// DumpToString(new SerializeWithConditionExample() { Ints = [1] }); // "{\"ints\": [1]}"
-/// DumpToString(new SerializeWithConditionExample() { Ints = [1, 2, 3] }); // "{\"ints\": [1, 2, 3], \"\\u044a\": \"kreisi burglar making pickles\"}"
-/// </code>
-/// </example>
-public interface IConditionalAntigravSerializable {
-    public abstract bool SerializeIt(AntigravSerializable serializable, System.Reflection.MemberInfo memberInfo);
-}
-
-/// <summary>
 /// When placed on a property or field of type System.Collections.Generic.IDictionary`2, any
 /// properties that do not have a matching member are added to that dictionary during
 /// deserialization and written during serialization.

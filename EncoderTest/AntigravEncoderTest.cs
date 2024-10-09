@@ -272,31 +272,6 @@ public class AntigravEncoderTest {
         string antigrav = DumpToString(value);
         Assert.AreEqual("[[12, 34], [34, 45]]", antigrav);
     }
-    private class SerializeWithConditionTest : IConditionalAntigravSerializable {
-        [AntigravSerializable("ints")]
-        public List<int> Ints { get; set; } = [];
-
-        [AntigravSerializable("ъ")]
-        public string text = "this product contains 23 kg of sodium hydroxide";
-        public bool SerializeIt(AntigravSerializable serializable, MemberInfo memberInfo) {
-            if (memberInfo is FieldInfo fieldInfo) {
-                if (fieldInfo.Name == "text") // or serializable.Name == "ъ"
-                    return Ints.Contains(3);
-            }
-            return true;
-        }
-    }
-    [TestMethod]
-    public void Encode_WithCondition() {
-        var value = new SerializeWithConditionTest();
-        Assert.AreEqual("{\"ints\": []}", DumpToString(value));
-        value.Ints.Add(1);
-        Assert.AreEqual("{\"ints\": [1]}", DumpToString(value));
-        value.Ints.Add(2);
-        Assert.AreEqual("{\"ints\": [1, 2]}", DumpToString(value));
-        value.Ints.Add(3);
-        Assert.AreEqual("{\"ints\": [1, 2, 3], \"\\u044a\": \"this product contains 23 kg of sodium hydroxide\"}", DumpToString(value));
-    }
 
     [TestMethod]
     public void Encode_StringWithEscape() {

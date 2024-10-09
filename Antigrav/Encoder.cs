@@ -8,19 +8,19 @@ using System.Text;
 namespace Antigrav;
 
 internal static class Encoder {
-    private static bool IsUserDefined(this MemberInfo memberInfo) => memberInfo is FieldInfo fieldInfo && fieldInfo.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Length == 0;
+    private static bool IsUserDefined(this MemberInfo memberInfo) => memberInfo.GetCustomAttributes(typeof(CompilerGeneratedAttribute), false).Length == 0;
     private static string Name(this MemberInfo memberInfo) => memberInfo switch {
         PropertyInfo propertyInfo => propertyInfo.Name,
         FieldInfo fieldInfo => fieldInfo.Name,
         _ => "ъ"
     };
     private static object? GetValue(this MemberInfo memberInfo, object? o) => memberInfo switch {
-        PropertyInfo propertyInfo => propertyInfo.GetGetMethod() == null ? null : propertyInfo.GetValue(o),
+        PropertyInfo propertyInfo => (propertyInfo.GetGetMethod() ?? throw new InvalidOperationException($"Property {propertyInfo.Name} does not have a getter method.")).Invoke(o, []),
         FieldInfo fieldInfo => fieldInfo.GetValue(o),
-        _ => null
+        _ => throw new Exception("instant death of instant death of the universe")
     };
     private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly;
-    private static readonly Dictionary<char, string> ESCAPE_DICT = new() {
+    private static readonly Dictionary<int, string> ESCAPE_DICT = new() {
         {'\\', "\\\\"},
         {'"', "\\\""},
         {'\x00', "\\0"},
@@ -56,7 +56,7 @@ internal static class Encoder {
         {'\x1e', "\\x1e"},
         {'\x1f', "\\x1f"}
     };
-    private static string EncodeString(string s) => s.Select(x => ESCAPE_DICT.TryGetValue(x, out string? value) ? value : char.ToString(x)).ToString()!;
+    private static string EncodeString(string s) => string.Join("", s.EnumerateRunes().Select(x => ESCAPE_DICT.TryGetValue(x.Value, out string? value) ? value : x.ToString()));
     private static string EncodeStringASCII(string s) => string.Join("",
         s.EnumerateRunes().Select(rune =>
             0x20 <= rune.Value && rune.Value <= 0x7f ?
@@ -184,7 +184,7 @@ internal static class Encoder {
                     return;
             }
         }
-
+        
         Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
             foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
@@ -192,18 +192,13 @@ internal static class Encoder {
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
                 object? value = member.GetValue(o);
-                if (forceSave && member.IsUserDefined())
-                    dictionary.Add(name, value);
-                else if (antigravSerializable != null && (
-                     (o is not IConditionalAntigravSerializable) ||
-                     (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, member))
-                    ))
+                if ((forceSave && member.IsUserDefined()) || (antigravSerializable != null))
                     dictionary.Add(name, value);
                 else if (antigravExtensionData != null) {
-                    IDictionary? dict = (IDictionary?)member.GetValue(o);
-                    if (dict == null) continue;
+                    IDictionary? extensionData = (IDictionary?)value;
+                    if (extensionData == null) continue;
                     dictionary = dictionary.Concat(
-                        dict.Keys.Cast<object>().Zip(dict.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))
+                        extensionData.Keys.Cast<object>().Zip(extensionData.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))
                     ).ToDictionary(x => x.Key, x => x.Value);
                 }
             }
