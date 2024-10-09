@@ -192,9 +192,20 @@ internal static class Encoder {
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
                 object? value = member.GetValue(o);
-                if (forceSave && member.IsUserDefined()) dictionary.Add(name, value);
-                else if (antigravSerializable != null && ((o is not IConditionalAntigravSerializable) || (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, member)))) dictionary.Add(name, value);
-                else if (antigravExtensionData != null) dictionary = dictionary.Concat(((IDictionary)member.GetValue(o)!).Keys.Cast<object>().Zip(((IDictionary)member.GetValue(o)!).Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))).ToDictionary(x => x.Key, x => x.Value);
+                if (forceSave && member.IsUserDefined())
+                    dictionary.Add(name, value);
+                else if (antigravSerializable != null && (
+                     (o is not IConditionalAntigravSerializable) ||
+                     (o is IConditionalAntigravSerializable conditionalSerializable && conditionalSerializable.SerializeIt(antigravSerializable, member))
+                    ))
+                    dictionary.Add(name, value);
+                else if (antigravExtensionData != null) {
+                    IDictionary? dict = (IDictionary?)member.GetValue(o);
+                    if (dict == null) continue;
+                    dictionary = dictionary.Concat(
+                        dict.Keys.Cast<object>().Zip(dict.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))
+                    ).ToDictionary(x => x.Key, x => x.Value);
+                }
             }
             return dictionary;
         }
