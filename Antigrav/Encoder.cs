@@ -15,7 +15,7 @@ internal static class Encoder {
         _ => "ъ"
     };
     private static object? GetValue(this MemberInfo memberInfo, object? o) => memberInfo switch {
-        PropertyInfo propertyInfo => propertyInfo.GetValue(o),
+        PropertyInfo propertyInfo => (propertyInfo.GetGetMethod() ?? throw new InvalidOperationException($"Property {propertyInfo.Name} does not have a getter method.")).Invoke(o, null),
         FieldInfo fieldInfo => fieldInfo.GetValue(o),
         _ => throw new Exception("instant death of instant death of the universe")
     };
@@ -192,7 +192,11 @@ internal static class Encoder {
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
                 object? value = member.GetValue(o);
-                if ((forceSave && member.IsUserDefined()) || (antigravSerializable != null))
+                if (!member.IsUserDefined())
+                    continue;
+                if (forceSave)
+                    dictionary.Add(name, value);
+                else if (antigravSerializable != null)
                     dictionary.Add(name, value);
                 else if (antigravExtensionData != null) {
                     IDictionary? extensionData = (IDictionary?)value;
