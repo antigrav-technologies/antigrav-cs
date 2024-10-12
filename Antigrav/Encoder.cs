@@ -187,23 +187,26 @@ internal static class Encoder {
         
         Dictionary<object, object?> ObjectToDict(object o) {
             Dictionary<object, object?> dictionary = [];
-            foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field)) {
+            foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => (member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field) && member.IsUserDefined())) {
                 AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
                 object? value = member.GetValue(o);
-                if (!member.IsUserDefined())
+                if (forceSave) {
+                    dictionary.Add(name, value);
                     continue;
-                if (forceSave)
+                }
+                if (antigravSerializable != null) {
                     dictionary.Add(name, value);
-                else if (antigravSerializable != null)
-                    dictionary.Add(name, value);
-                else if (antigravExtensionData != null) {
+                    continue;
+                }
+                if (antigravExtensionData != null) {
                     IDictionary? extensionData = (IDictionary?)value;
                     if (extensionData == null) continue;
                     dictionary = dictionary.Concat(
                         extensionData.Keys.Cast<object>().Zip(extensionData.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))
                     ).ToDictionary(x => x.Key, x => x.Value);
+                    continue;
                 }
             }
             return dictionary;
