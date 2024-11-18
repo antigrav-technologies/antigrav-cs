@@ -32,14 +32,14 @@ internal static partial class Decoder {
     private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
     private const RegexOptions FLAGS = RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled;
 
-    [GeneratedRegex("-?\\d+", FLAGS)]
+    [GeneratedRegex(@"-?\d+", FLAGS)]
     private static partial Regex INT();
 
-    [GeneratedRegex("([-+]?)((\\d*(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)", FLAGS)]
+    [GeneratedRegex(@"([-+]?)((\d*(?:\.\d+|[eE][-+]?\d+))|inf|nan)", FLAGS)]
     private static partial Regex FLOAT();
 
-    [GeneratedRegex("([-+]?)((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)" +
-                    "([+-])((\\d+(?:\\.\\d+|[eE][-+]?\\d+))|inf|nan)i", FLAGS)]
+    [GeneratedRegex(@"([-+]?)((\d+(?:\.\d+|[eE][-+]?\d+))|inf|nan)" +
+                    @"([+-])((\d+(?:\.\d+|[eE][-+]?\d+))|inf|nan)i", FLAGS)]
     private static partial Regex COMPLEX();
 
     private static readonly Dictionary<char, char> BACKSLASH = new() {
@@ -54,9 +54,9 @@ internal static partial class Decoder {
         {'f', '\f'},
         {'r', '\r'}
     };
-
-    private class ConvertButNotReally {
-        public static Array DecodeArray(object o, Type type) {
+    
+    private static class ConvertButNotReally {
+        private static Array DecodeArray(object o, Type type) {
             Type elementType = type.GetElementType()!;
             Array array = Array.CreateInstance(elementType, ((ICollection)o).Count);
             int i = 0;
@@ -66,30 +66,30 @@ internal static partial class Decoder {
             return array;
         }
 
-        public static object DecodeDictionary(object o, Type type) {
+        private static object DecodeDictionary(object o, Type type) {
             Type keyType = type.GetGenericArguments()[0];
             Type valueType = type.GetGenericArguments()[1];
-            var dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
+            Type dictType = typeof(Dictionary<,>).MakeGenericType(keyType, valueType);
             object dict = Activator.CreateInstance(dictType)!;
-            var method = dictType.GetMethod("Add")!;
+            MethodInfo method = dictType.GetMethod("Add")!;
             foreach (KeyValuePair<object, object?> entry in (IEnumerable)o) {
                 method.Invoke(dict, [ChangeType(entry.Key, keyType), ChangeType(entry.Value, valueType)]);
             }
             return dict;
         }
 
-        public static object DecodeList(object o, Type type) {
+        private static object DecodeList(object o, Type type) {
             Type elementType = type.GetGenericArguments()[0];
             Type listType = typeof(List<>).MakeGenericType(elementType);
             object list = Activator.CreateInstance(listType)!;
-            var method = listType.GetMethod("Add")!;
+            MethodInfo method = listType.GetMethod("Add")!;
             foreach (object item in (IEnumerable)o) {
                 method.Invoke(list, [ChangeType(item, elementType)]);
             }
             return list;
         }
 
-        public static object TryCreateObject(Type targetType) {
+        private static object TryCreateObject(Type targetType) {
             try {
                 return Activator.CreateInstance(targetType)!;
             }
@@ -99,15 +99,15 @@ internal static partial class Decoder {
             }
         }
 
-        public static object DecodeObject(object o, Type type) {
+        private static object DecodeObject(object o, Type type) {
             if (o is not Dictionary<object, object>) throw new AntigravCastingError(o.GetType(), type);
             object target = TryCreateObject(type);
             var dictionary = (Dictionary<object, object?>)ChangeType(o, typeof(Dictionary<object, object?>))!;
-            foreach (var member in type.GetMembers(BINDING_FLAGS).Where(m => m.MemberType == MemberTypes.Property || m.MemberType == MemberTypes.Field)) {
+            foreach (var member in type.GetMembers(BINDING_FLAGS).Where(m => m.MemberType is MemberTypes.Property or MemberTypes.Field)) {
                 AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 string name = antigravSerializable == null ? member.Name : antigravSerializable.Name ?? member.Name;
                 if (antigravSerializable != null) {
-                    member.SetValue(target, ChangeType(dictionary.TryGetValue(name, out var v) ? v : (antigravSerializable.LoadAsNull ? antigravSerializable.DefaultValue : antigravSerializable.DefaultValue ?? TryCreateObject(member.Type())), member.Type()));
+                    member.SetValue(target, ChangeType(dictionary.TryGetValue(name, out var v) ? v : antigravSerializable.LoadAsNull ? antigravSerializable.DefaultValue : antigravSerializable.DefaultValue ?? TryCreateObject(member.Type()), member.Type()));
                 }
                 else if (dictionary.ContainsKey(member.Name)) {
                     member.SetValue(target, ChangeType(dictionary[name], member.Type()));
@@ -121,6 +121,7 @@ internal static partial class Decoder {
                 foreach (var kvp in dictionary) {
                     method.Invoke(extensionData, [kvp.Key, kvp.Value]);
                 }
+
                 extensionsMember.SetValue(target, extensionData);
             }
             return target;
@@ -149,17 +150,23 @@ internal static partial class Decoder {
             if (type.IsEnum) return Enum.ToObject(type, o);
             if (type.IsArray) return DecodeArray(o, type);
             if (type.IsGenericType) {
-                var type_ = type.GetGenericTypeDefinition();
-                if (type_ == typeof(Tuple<>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Tuple<,,,,,,,>)) return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
-                if (type_ == typeof(Dictionary<,>)) return DecodeDictionary(o, type);
-                if (type_ == typeof(List<>)) return DecodeList(o, type);
+                Type type_ = type.GetGenericTypeDefinition();
+                
+                switch (type_) {
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,,,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,,,,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,,,,,>)):
+                    case var _ when type_.IsAssignableTo(typeof(Tuple<,,,,,,,>)):
+                        return Activator.CreateInstance(type, ((IList)o).Cast<object>().ToArray());
+                    case var _ when type_.IsAssignableTo(typeof(Dictionary<,>)):
+                        return DecodeDictionary(o, type);
+                    case var _ when type_.IsAssignableTo(typeof(List<>)):
+                        return DecodeList(o, type);
+                }
             }
             return DecodeObject(o, type);
         }
@@ -171,8 +178,60 @@ internal static partial class Decoder {
 
     public static T? Decode<T>(string s) {
         int idx = 0;
+        
+        object? o;
+        try {
+            o = DecodeAny();
+        }
+        catch (StopIteration err) {
+            throw new AntigravDecodeError("Expecting value", s, err.Value);
+        }
+        if (idx != s.Length) throw new AntigravDecodeError("Extra data", s, idx);
+        return (T?)ConvertButNotReally.ChangeType(o, typeof(T?));
+        
         string DecodeString() {
             StringBuilder builder = new();
+
+            int begin = idx - 1;
+            while (true) {
+                if (idx >= s.Length || s[idx] < ' ') {
+                    throw new AntigravDecodeError("Unterminated string starting at", s, begin);
+                }
+                char nextchar = s[idx++];
+                if (nextchar == '"') break;
+                if (nextchar == '\\') {
+                    if (idx >= s.Length) throw new AntigravDecodeError("Unterminated string starting at", s, idx);
+                    char esc = s[idx++];
+                    switch (esc) {
+                        case 'x':
+                            _decode_xXX();
+                            break;
+                        case 'u':
+                            _decode_uXXXX();
+                            break;
+                        case 'U':
+                            _decode_uXXXXXXXX();
+                            break;
+                        default:
+                            if (BACKSLASH.TryGetValue(esc, out char value)) {
+                                builder.Append(value);
+                            }
+                            else {
+                                throw new AntigravDecodeError($"Invalid \\ escape: {esc}", s, idx);
+                            }
+                            break;
+                    }
+                }
+                else {
+                    builder.Append(nextchar);
+                    if (!char.IsSurrogate(nextchar)) continue;
+                    idx++;
+                    if (idx >= s.Length) throw new AntigravDecodeError("Unterminated string starting at", s, idx);
+                    builder.Append(s[idx]);
+                }
+            }
+            return builder.ToString();
+            
             void _decode_xXX() {
                 string uni = s.SubstringSafe(idx, 2);
                 if (uni.Length == 2 && short.TryParse(uni, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out short codePoint)) {
@@ -197,37 +256,6 @@ internal static partial class Decoder {
                 }
                 else throw new AntigravDecodeError("Invalid \\uXXXXXXXX escape", uni, idx);
             }
-
-            int begin = idx - 1;
-            while (true) {
-                if (idx >= s.Length || s[idx] < ' ') {
-                    throw new AntigravDecodeError("Unterminated string starting at", s, begin);
-                }
-                char nextchar = s[idx++];
-                if (nextchar == '"') break;
-                else if (nextchar == '\\') {
-                    if (idx >= s.Length) throw new AntigravDecodeError("Unterminated string starting at", s, idx);
-                    char esc = s[idx++];
-                    if (esc == 'x') _decode_xXX();
-                    else if (esc == 'u') _decode_uXXXX();
-                    else if (esc == 'U') _decode_uXXXXXXXX();
-                    else if (BACKSLASH.TryGetValue(esc, out char value)) {
-                        builder.Append(value);
-                    }
-                    else {
-                        throw new AntigravDecodeError($"Invalid \\ escape: {esc}", s, idx);
-                    }
-                }
-                else {
-                    builder.Append(nextchar);
-                    if (char.IsSurrogate(nextchar)) {
-                        idx++;
-                        if (idx >= s.Length) throw new AntigravDecodeError("Unterminated string starting at", s, idx);
-                        builder.Append(s[idx]);
-                    }
-                }
-            }
-            return builder.ToString();
         }
 
         void ExpectChar(char c) {
@@ -309,83 +337,66 @@ internal static partial class Decoder {
                 throw new StopIteration(idx);
             }
 
-            if (nextchar == '"') {
-                idx++;
-                return DecodeString();
+            switch (nextchar) {
+                case '"':
+                    idx++;
+                    return DecodeString();
+                case '{':
+                    idx++;
+                    return DecodeDict();
+                case '[':
+                    idx++;
+                    return DecodeList();
+                case 'n' when s.SubstringSafe(idx, 4) == "null":
+                    idx += 4;
+                    return null;
+                case 't' when s.SubstringSafe(idx, 4) == "true":
+                    idx += 4;
+                    return true;
+                case 'f' when s.SubstringSafe(idx, 5) == "false":
+                    idx += 5;
+                    return false;
             }
-            if (nextchar == '{') {
-                idx++;
-                return DecodeDict();
-            }
-            if (nextchar == '[') {
-                idx++;
-                return DecodeList();
-            }
-            if (nextchar == 'n' && s.SubstringSafe(idx, 4) == "null") {
-                idx += 4;
-                return null;
-            }
-            if (nextchar == 't' && s.SubstringSafe(idx, 4) == "true") {
-                idx += 4;
-                return true;
-            }
-            if (nextchar == 'f' && s.SubstringSafe(idx, 5) == "false") {
-                idx += 5;
-                return false;
-            }
-            Match match;
-            match = COMPLEX().Match(s, idx);
+
+            Match match = COMPLEX().Match(s, idx);
             if (match.Success && match.Index == idx) {
                 // миша☘️go to нахуй 😾собирайся в садик🏡идидиди 😭misha get up quickly 🥺ДА ИДЕ НАХУУУУУ 🐀😅
-                var realSign = match.Groups[1].Value;
-                var realRest = match.Groups[2].Value;
-                var imagSign = match.Groups[4].Value;
-                var imagRest = match.Groups[5].Value;
-
-                double real;
-                double imag;
-
-                if (realRest == "inf") real = double.PositiveInfinity;
-                else if (realRest == "nan") real = double.NaN;
-                else real = double.Parse(realRest);
-                if (realSign == "-") real *= -1;
-
-                if (imagRest == "inf") imag = double.PositiveInfinity;
-                else if (imagRest == "nan") imag = double.NaN;
-                else imag = double.Parse(imagRest);
-                if (imagSign == "-") imag *= -1;
-
                 idx = match.End();
-                return new Complex(real, imag);
+                return new Complex(
+                    match.Groups[2].Value switch {
+                        "inf" => double.PositiveInfinity,
+                        "nan" => double.NaN,
+                        _ => double.Parse(match.Groups[2].Value)
+                    } * (match.Groups[1].Value == "-" ? -1 : 1),
+                    match.Groups[5].Value switch {
+                        "inf" => double.PositiveInfinity,
+                        "nan" => double.NaN,
+                        _ => double.Parse(match.Groups[5].Value)
+                    } * (match.Groups[4].Value == "-" ? -1 : 1)
+                );
             }
             match = FLOAT().Match(s, idx);
             if (match.Success && match.Index == idx) {
-                var rest = match.Groups[2].Value;
-                if (rest != null) {
-                    var sign = match.Groups[1].Value;
-                    idx = match.End();
-                    switch (char.ToUpper(s.CharAt(idx) ?? 'ъ')) {
-                        case 'F':
-                            idx++;
-                            float value1;
-                            if (rest == "inf") value1 = float.PositiveInfinity;
-                            else if (rest == "nan") value1 = float.NaN;
-                            else value1 = float.Parse(rest);
-                            if (sign == "-") value1 *= -1;
-                            return value1;
-                        case 'M':
-                            idx++;
-                            decimal value2 = decimal.Parse(rest);
-                            if (sign == "-") value2 *= -1;
-                            return value2;
-                        default:
-                            double value3;
-                            if (rest == "inf") value3 = double.PositiveInfinity;
-                            else if (rest == "nan") value3 = double.NaN;
-                            else value3 = double.Parse(rest);
-                            if (sign == "-") value3 *= -1;
-                            return value3;
-                    }
+                string rest = match.Groups[2].Value;
+                string sign = match.Groups[1].Value;
+                idx = match.End();
+                switch (char.ToUpper(s.CharAt(idx) ?? 'ъ')) {
+                    case 'F':
+                        idx++;
+                        return rest switch {
+                            "inf" => float.PositiveInfinity,
+                            "nan" => float.NaN,
+                            _ => float.Parse(rest)
+                        } * (sign == "-" ? -1 : 1);
+                    case 'M':
+                        idx++;
+                        return decimal.Parse(rest) * (sign == "-" ? -1 : 1);
+                    default:
+                        return rest switch {
+                            "inf" => double.PositiveInfinity,
+                            "nan" => double.NaN,
+                            _ => double.Parse(rest)
+                        } * (sign == "-" ? -1 : 1);
                 }
             }
             match = INT().Match(s, idx);
@@ -427,15 +438,5 @@ internal static partial class Decoder {
             }
             throw new StopIteration(idx);
         }
-
-        object? o;
-        try {
-            o = DecodeAny();
-        }
-        catch (StopIteration err) {
-            throw new AntigravDecodeError("Expecting value", s, err.Value);
-        }
-        if (idx != s.Length) throw new AntigravDecodeError("Extra data", s, idx);
-        return (T?)ConvertButNotReally.ChangeType(o, typeof(T?));
     }
 }

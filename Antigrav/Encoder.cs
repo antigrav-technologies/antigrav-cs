@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Data;
 using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -21,7 +20,7 @@ internal static class Encoder {
     };
     private const BindingFlags BINDING_FLAGS = BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly;
     private static readonly Dictionary<int, string> ESCAPE_DICT = new() {
-        {'\\', "\\\\"},
+        {'\\', @"\\"},
         {'"', "\\\""},
         {'\x00', "\\0"},
         {'\x01', "\\x01"},
@@ -57,9 +56,9 @@ internal static class Encoder {
         {'\x1f', "\\x1f"}
     };
     private static string EncodeString(string s) => string.Join("", s.EnumerateRunes().Select(x => ESCAPE_DICT.TryGetValue(x.Value, out string? value) ? value : x.ToString()));
-    private static string EncodeStringASCII(string s) => string.Join("",
+    private static string EncodeStringAscii(string s) => string.Join("",
         s.EnumerateRunes().Select(rune =>
-            0x20 <= rune.Value && rune.Value <= 0x7f ?
+            rune.Value is >= 0x20 and <= 0x7f ?
             char.ToString((char)rune.Value) :
             ESCAPE_DICT.TryGetValue((char)rune.Value, out string? value) ? value :
             rune.Value < 0x10000 ? $"\\u{rune.Value:x4}" : $"\\U{rune.Value:x8}"
@@ -67,25 +66,28 @@ internal static class Encoder {
     );
 
     // i hope i dont forget why i called a class so in the future
-    private class NoneOfYourGoddamnBusinees : IComparer<object?> {
+    // update: i forgot
+    private class NoneOfYourGoddamnBusiness : IComparer<object?> {
         private static bool IsNumber(object? o) => o is sbyte or byte or ushort or short or int or uint or long or ulong or Int128 or UInt128 or float or double or decimal or Complex;
 
         public int Compare(object? x, object? y) {
-            if (x is bool boolX) return y is bool boolY ? boolX ? boolY ? 0 : 1 : -1 : -1;
-
-            if (x is string stringX) {
-                if (y is string stringY) return string.Compare(stringX, stringY);
-                return -1;
+            switch (x) {
+                case bool boolX:
+                    return y is bool boolY ? boolX ? boolY ? 0 : 1 : -1 : -1;
+                case string stringX when y is string stringY:
+                    return string.CompareOrdinal(stringX, stringY);
+                case string:
+                    return -1;
             }
 
             if (x!.GetType().IsEnum) x = Convert.ChangeType((Enum)x, Enum.GetUnderlyingType(x.GetType()));
             if (y!.GetType().IsEnum) y = Convert.ChangeType((Enum)y, Enum.GetUnderlyingType(y.GetType()));
 
-            if (IsNumber(x)) {
-                if (IsNumber(y)) return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x, y is Complex complexY ? complexY.Real : y);
-                return -1;
-            }
-            return 0;
+            if (!IsNumber(x)) return 0;
+            if (IsNumber(y))
+                return Comparer<object>.Default.Compare(x is Complex complexX ? complexX.Real : x,
+                    y is Complex complexY ? complexY.Real : y);
+            return -1;
         }
     }
 
@@ -93,14 +95,19 @@ internal static class Encoder {
         object? o,
         bool sortKeys,
         uint? indent,
-        bool ensureASCII,
+        bool ensureAscii,
         bool allowNaN,
         bool forceSave
     ) {
         StringBuilder builder = new();
-        Func<string, string> stringEncoder = ensureASCII ? EncodeStringASCII : EncodeString;
+        Func<string, string> stringEncoder = ensureAscii ? EncodeStringAscii : EncodeString;
 
-        void EncodeInteger(object o) => builder.Append(o.ToString() + o switch {
+        EncodeAny(o, 0);
+
+        return builder.ToString();
+
+        // щ
+        void EncodeInteger(object щ) => builder.Append(щ + щ switch {
             sbyte => "b",
             byte => "B",
             short => "s",
@@ -112,31 +119,35 @@ internal static class Encoder {
             UInt128 => "LL",
             _ => ""
         });
+        
+        void EncodeFloat(object щ) {
+            string prefix = щ switch {
+                float => "F",
+                decimal => "M",
+                _ => ""
+            };
 
-        void EncodeFloat(object o) {
-            string prefix = "";
-            if (o is float) prefix = "F";
-            if (o is decimal) prefix = "M";
-
-            string? text = null;
-            if ((o is float f1 && float.IsNaN(f1)) || (o is double d1 && double.IsNaN(d1))) text = "NaN";
-            else if ((o is float f2 && float.IsPositiveInfinity(f2)) || (o is double d2 && double.IsPositiveInfinity(d2))) text = "inf";
-            else if ((o is float f3 && float.IsNegativeInfinity(f3)) || (o is double d3 && double.IsNegativeInfinity(d3))) text = "-inf";
+            string? text = щ switch {
+                float.NaN or double.NaN => "NaN",
+                float.PositiveInfinity or double.PositiveInfinity => "inf",
+                float.NegativeInfinity or double.NegativeInfinity => "-inf",
+                _ => null
+            };
 
             if (!allowNaN && text != null) {
-                throw new ArgumentException($"Out of range float values are not Antigrav compliant: {o}");
+                throw new ArgumentException($"Out of range float values are not Antigrav compliant: {щ}");
             }
 
-            text ??= o switch {
-                float f => (f == 0) || (1e-4f < MathF.Abs(f) && MathF.Abs(f) < 1e7f) ? f.ToString("0.0#####") : f.ToString("e"),
-                double d => (d == 0) || (1e-4 < Math.Abs(d) && Math.Abs(d) < 1e15) ? d.ToString("0.0#############") : d.ToString("e"),
+            text ??= щ switch {
+                float f => f == 0 || (1e-4f < MathF.Abs(f) && MathF.Abs(f) < 1e7f) ? f.ToString("0.0#####") : f.ToString("e"),
+                double d => d == 0 || (1e-4 < Math.Abs(d) && Math.Abs(d) < 1e15) ? d.ToString("0.0#############") : d.ToString("e"),
                 decimal m => m.ToString("0.0#############################"),
                 _ => "idk bruvver it should never call"
             };
 
             builder.Append(text + prefix);
         }
-
+        
         void EncodeComplex(Complex c) {
             EncodeFloat(c.Real);
             builder.Append(c.Imaginary < 0 ? '-' : '+');
@@ -144,8 +155,8 @@ internal static class Encoder {
             builder.Append('i');
         }
 
-        void EncodeAny(object? o, uint currentIndentLevel) {
-            switch (o) {
+        void EncodeAny(object? щ, uint currentIndentLevel) {
+            switch (щ) {
                 case null:
                     builder.Append("null");
                     return;
@@ -159,13 +170,13 @@ internal static class Encoder {
                     builder.Append(b ? "true" : "false");
                     return;
                 case sbyte or byte or short or ushort or int or uint or long or ulong or Int128 or UInt128:
-                    EncodeInteger(o);
+                    EncodeInteger(щ);
                     return;
                 case Enum @enum:
                     EncodeInteger(Convert.ChangeType(@enum, Enum.GetUnderlyingType(@enum.GetType())));
                     return;
                 case float or double or decimal:
-                    EncodeFloat(o);
+                    EncodeFloat(щ);
                     return;
                 case Complex c:
                     EncodeComplex(c);
@@ -180,18 +191,18 @@ internal static class Encoder {
                     EncodeList(l.Cast<object?>().ToList(), currentIndentLevel);
                     return;
                 default:
-                    EncodeDict(ObjectToDict(o), currentIndentLevel);
+                    EncodeDict(ObjectToDict(щ), currentIndentLevel);
                     return;
             }
         }
         
-        Dictionary<object, object?> ObjectToDict(object o) {
+        Dictionary<object, object?> ObjectToDict(object щ) {
             Dictionary<object, object?> dictionary = [];
-            foreach (MemberInfo member in o.GetType().GetMembers(BINDING_FLAGS).Where(member => (member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field) && member.IsUserDefined())) {
+            foreach (MemberInfo member in щ.GetType().GetMembers(BINDING_FLAGS).Where(member => (member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field) && member.IsUserDefined())) {
                 AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();
-                object? value = member.GetValue(o);
+                object? value = member.GetValue(щ);
                 if (forceSave) {
                     dictionary.Add(name, value);
                     continue;
@@ -200,14 +211,15 @@ internal static class Encoder {
                     dictionary.Add(name, value);
                     continue;
                 }
-                if (antigravExtensionData != null) {
-                    IDictionary? extensionData = (IDictionary?)value;
-                    if (extensionData == null) continue;
-                    dictionary = dictionary.Concat(
-                        extensionData.Keys.Cast<object>().Zip(extensionData.Values.Cast<object?>(), (k, v) => new KeyValuePair<object, object?>(k, v))
-                    ).ToDictionary(x => x.Key, x => x.Value);
-                    continue;
-                }
+
+                if (antigravExtensionData == null) continue;
+                
+                IDictionary? extensionData = (IDictionary?)value;
+                if (extensionData == null) continue;
+                dictionary = dictionary.Concat(
+                    extensionData.Keys.Cast<object>().Zip(extensionData.Values.Cast<object?>(),
+                        (k, v) => new KeyValuePair<object, object?>(k, v))
+                ).ToDictionary(x => x.Key, x => x.Value);
             }
             return dictionary;
         }
@@ -219,12 +231,11 @@ internal static class Encoder {
                 return;
             }
             string separator = ", ";
-            string? _newline_indent = null;
             if (indent != null) {
                 currentIndentLevel++;
-                _newline_indent = '\n' + new string(' ', (int)(indent * currentIndentLevel));
-                separator = "," + _newline_indent;
-                builder.Append(_newline_indent);
+                string newlineIndent = '\n' + new string(' ', (int)(indent * currentIndentLevel));
+                separator = "," + newlineIndent;
+                builder.Append(newlineIndent);
             }
             bool first = true;
             foreach (object? value in list) {
@@ -246,15 +257,14 @@ internal static class Encoder {
                 return;
             }
             string separator = ", ";
-            string? _newline_indent = null;
             if (indent != null) {
                 currentIndentLevel++;
-                _newline_indent = '\n' + new string(' ', (int)(indent * currentIndentLevel));
-                separator = "," + _newline_indent;
-                builder.Append(_newline_indent);
+                string newlineIndent = '\n' + new string(' ', (int)(indent * currentIndentLevel));
+                separator = "," + newlineIndent;
+                builder.Append(newlineIndent);
             }
 
-            if (sortKeys) dict = dict.OrderBy(x => x.Key, new NoneOfYourGoddamnBusinees()).ToDictionary(x => x.Key, x => x.Value);
+            if (sortKeys) dict = dict.OrderBy(x => x.Key, new NoneOfYourGoddamnBusiness()).ToDictionary(x => x.Key, x => x.Value);
             bool first = true;
             foreach (var keyValue in dict) {
                 if (first) first = false;
@@ -270,9 +280,5 @@ internal static class Encoder {
             }
             builder.Append('}');
         }
-
-        EncodeAny(o, 0);
-
-        return builder.ToString();
     }
 }

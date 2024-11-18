@@ -1,6 +1,6 @@
 # Antigrav
 [NuGet](https://www.nuget.org/packages/Antigrav) | [Source](https://github.com/antigrav-technologies/antigrav-cs)\
-Serializing library based on JSON format, so its also easy to read format.
+Serializing library based on JSON format, so it's also easy to read format.
 ## Types
 - null
 - string: specified in quotation marks (`""`)
@@ -64,4 +64,4 @@ Console.WriteLine(antigrav); // "{\"value\": 1, \"suit\": 3}"
 Card decodedValue = AntigravConvert.LoadFromString<Card>(antigrav);
 Console.WriteLine(decodedValue); // "Ace of Spades"
 ```
-This was made as an experiment at first place, any tweaks in code are welcome. Dont ask why format is called so, the origin was extremely stupid
+This was made as an experiment at first place, any tweaks in code are welcome. Don't ask why format is called so, the origin was extremely stupid
