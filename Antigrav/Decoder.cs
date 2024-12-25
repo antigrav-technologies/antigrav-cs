@@ -114,7 +114,7 @@ internal static partial class Decoder {
                 }
                 dictionary.Remove(name);
             }
-            MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<AntigravExtensionData>() != null);
+            MemberInfo? extensionsMember = type.GetMembers(BINDING_FLAGS).Where(member => member.MemberType is MemberTypes.Property or MemberTypes.Field).FirstOrDefault(member => member.GetCustomAttribute<AntigravExtensionData>() != null);
             if (extensionsMember != null) {
                 IDictionary extensionData = (IDictionary)TryCreateObject(extensionsMember.Type());
                 MethodInfo method = extensionsMember.Type().GetMethod("Add")!;

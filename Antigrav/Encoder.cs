@@ -187,8 +187,8 @@ internal static class Encoder {
                 case ITuple t:
                     EncodeList(t.GetType().GetProperties().Select(p => p.GetValue(t)).ToList(), currentIndentLevel);
                     return;
-                case ICollection l:
-                    EncodeList(l.Cast<object?>().ToList(), currentIndentLevel);
+                case ICollection collection:
+                    EncodeList(collection.Cast<object?>().ToList(), currentIndentLevel);
                     return;
                 default:
                     EncodeDict(ObjectToDict(щ), currentIndentLevel);
@@ -198,7 +198,7 @@ internal static class Encoder {
         
         Dictionary<object, object?> ObjectToDict(object щ) {
             Dictionary<object, object?> dictionary = [];
-            foreach (MemberInfo member in щ.GetType().GetMembers(BINDING_FLAGS).Where(member => (member.MemberType == MemberTypes.Property || member.MemberType == MemberTypes.Field) && member.IsUserDefined())) {
+            foreach (MemberInfo member in щ.GetType().GetMembers(BINDING_FLAGS).Where(member => member.MemberType is MemberTypes.Property or MemberTypes.Field && member.IsUserDefined())) {
                 AntigravSerializable? antigravSerializable = member.GetCustomAttribute<AntigravSerializable>();
                 AntigravExtensionData? antigravExtensionData = member.GetCustomAttribute<AntigravExtensionData>();
                 string name = antigravSerializable == null ? member.Name() : antigravSerializable.Name ?? member.Name();

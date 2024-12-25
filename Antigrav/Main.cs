@@ -1,12 +1,11 @@
 ﻿namespace Antigrav;
 
-
 /// <summary>
 /// Provides metadata to make property or field serializable.
 /// </summary>
 /// <param name="name">The name of the property or field in the serialized output. If not specified then original name is used</param>
 /// <param name="defaultValue">Default value for the property or field if it's missing</param>
-/// <param name="loadAsNull">If <paramref name="defaultValue">defaultValue</paramref> is null, then if this argument is false, this field/property will be loaded as new instance (0, '\x0', new List&ltint&gt { }, null, etc.), keeps null otherwise (do not use on strings!)</param>
+/// <param name="loadAsNull">If <paramref name="defaultValue">defaultValue</paramref> is null, then if this argument is false, this field/property will be loaded as new instance (0, '\x0', new List(), null, etc.), keeps null otherwise (do not use on strings!)</param>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 public class AntigravSerializable(string? name = null, object? defaultValue = null, bool loadAsNull = false) : Attribute {
     public string? Name { get; } = name;
@@ -75,25 +74,12 @@ public static class AntigravConvert {
     /// <summary>
     /// Write object serialized as an Antigrav string to stream
     /// </summary>
-    /// <param name="o">Object to serialze</param>
+    /// <param name="o">Object to serialize</param>
     /// <param name="sortKeys">Sort keys in dictionaries</param>
     /// <param name="indent">Amount of spaces to indent, no indent if null</param>
     /// <param name="ensureAscii">If true then escapes all non-ASCII symbols</param>
     /// <param name="allowNaN">Allow not a number values (includes infinity), if false will throw ArgumentException</param>
-    /// <param name="forceSave">Saves every single field/property even if its not AntigravSerializable</param>
-    /// <example><code>
-    /// Dictionary<string, int> value = new Dictionary<string, int> { {"1", 2}, {"3", 4} };
-    /// using (System.IO.StreamWriter writer = new System.IO.StreamWriter("D:\\toaster oven.txt")) {
-    ///     Antigrav.Main.Dump(value, writer.BaseStream, indent: 4);
-    /// }
-    /// /*
-    /// should write this to stream:
-    /// {
-    ///     "1": 2
-    ///     "3": 4
-    /// }
-    /// */
-    /// </code></example>
+    /// <param name="forceSave">Saves every single field/property even if it's not AntigravSerializable</param>
     /// <exception cref="ArgumentException"></exception>
     public static void Dump(
         object? o,
@@ -105,23 +91,21 @@ public static class AntigravConvert {
         bool forceSave = false
     ) => stream.Write(System.Text.Encoding.UTF8.GetBytes(DumpToString(o, sortKeys, indent, ensureAscii, allowNaN, forceSave)));
 
-    private static string DetectEncoding(byte[] bytes) {
-        return bytes.Length switch {
-            // UTF-32 LE
-            >= 2 when bytes[0] == 0xFE && bytes[1] == 0xFF || // UTF-32 BE
-                      bytes[0] == 0xFF && bytes[1] == 0xFE => "utf-32",
-            // UTF-16 LE
-            >= 2 when bytes[0] == 0xFF && bytes[1] == 0xFE || // UTF-16 BE
-                      bytes[0] == 0xFE && bytes[1] == 0xFF => "utf-16",
-            // UTF-8 with BOM
-            >= 3 when bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF => "utf-8-sig",
-            >= 4 when bytes[0] == 0 => bytes[1] == 0 ? "utf-32-be" : "utf-16-be",
-            >= 4 when bytes[1] == 0 => bytes[2] == 0 && bytes[3] == 0 ? "utf-32-le" : "utf-16-le",
-            2 when bytes[0] == 0 => "utf-16-be",
-            2 when bytes[1] == 0 => "utf-16-le",
-            _ => "utf-8"
-        };
-    }
+    private static string DetectEncoding(byte[] bytes) => bytes.Length switch {
+        // UTF-32 LE
+        >= 2 when bytes[0] == 0xFE && bytes[1] == 0xFF || // UTF-32 BE
+                  bytes[0] == 0xFF && bytes[1] == 0xFE => "utf-32",
+        // UTF-16 LE
+        >= 2 when bytes[0] == 0xFF && bytes[1] == 0xFE || // UTF-16 BE
+                  bytes[0] == 0xFE && bytes[1] == 0xFF => "utf-16",
+        // UTF-8 with BOM
+        >= 3 when bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF => "utf-8-sig",
+        >= 4 when bytes[0] == 0 => bytes[1] == 0 ? "utf-32-be" : "utf-16-be",
+        >= 4 when bytes[1] == 0 => bytes[2] == 0 && bytes[3] == 0 ? "utf-32-le" : "utf-16-le",
+        2 when bytes[0] == 0 => "utf-16-be",
+        2 when bytes[1] == 0 => "utf-16-le",
+        _ => "utf-8"
+    };
 
     /// <summary>
     /// Deserialize stream containing Antigrav serialized object to a C# object
